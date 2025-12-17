@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from PySide6 import QtCore, QtWidgets
 
+# Onglet "Salon": gestion locale des playlists sauvegardées (DB), avec chargement rapide ou ouverture en éditeur.
+
 class SalonTab(QtWidgets.QWidget):
     """
     Salon = gestion des playlists enregistrées en DB.

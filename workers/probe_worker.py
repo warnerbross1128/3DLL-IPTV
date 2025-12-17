@@ -5,8 +5,10 @@ from PySide6 import QtCore
 
 from core.models import Channel
 
+# Worker Qt: teste en sous-processus la reachabilité des URLs de chaînes (HEAD/GET rapide).
 
 class ProbeWorker(QtCore.QObject):
+    """Runs URL probes in a separate QThread, reporting status per channel row."""
     progress = QtCore.Signal(int, str)  # row, status
     finished = QtCore.Signal()
 
@@ -52,6 +54,7 @@ class ProbeWorker(QtCore.QObject):
             q.put(f"KO (FATAL {type(e).__name__})")
 
     def _hard_probe(self, url: str) -> str:
+        """Isolé en sous-processus pour tuer proprement en cas de timeout bloquant."""
         ctx = mp.get_context("spawn")
         q = ctx.Queue()
         p = ctx.Process(target=ProbeWorker._probe_in_subprocess, args=(url, self.timeout_s, q))
@@ -71,6 +74,7 @@ class ProbeWorker(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Boucle principale déclenchée dans un QThread parent."""
         try:
             for idx, ch in enumerate(self.channels):
                 if self._stop:

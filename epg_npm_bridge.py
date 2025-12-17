@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable, Iterable
 import xml.etree.ElementTree as ET
 
+# Pont avec le repo iptv-org/epg (npm): sélectionne les sites utiles, lance `npm run grab` et fusionne les guides.
 LogFn = Callable[[str], None]
 
 
@@ -244,6 +245,7 @@ def generate_xmltv_for_tvg_ids(
     timeout_s: int = 900,
     log: LogFn | None = None,
 ) -> bytes:
+    """Pipeline npm: filtre sites par tvg-id, génère des channels dédiés, lance grab, puis fusionne."""
     """
     Pipeline:
     1) trouve les sites pertinents (via *.channels.xml)

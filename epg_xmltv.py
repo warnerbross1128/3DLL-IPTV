@@ -5,16 +5,21 @@ import gzip
 import io
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Iterable
 
 import requests
 
 
+"""
+Outils XMLTV: téléchargement d'un guide (XML/ZIP) puis parsing en flux pour insertion en DB.
+"""
+
 _DT_RE = re.compile(r"^(\d{14})")  # YYYYMMDDHHMMSS
 
 
 def download_xmltv(url: str, timeout: int = 90) -> bytes:
+    """Télécharge un flux XMLTV (support .gz) et renvoie les bytes décompressés."""
     r = requests.get(url, timeout=timeout)
     r.raise_for_status()
     data = r.content
@@ -48,7 +53,8 @@ def _parse_xmltv_dt(s: str) -> int:
         sign = 1 if off[0] == "+" else -1
         hh = int(off[1:3])
         mm = int(off[3:5])
-        tz = timezone(sign * (hh * 3600 + mm * 60))
+        offset_seconds = sign * (hh * 3600 + mm * 60)
+        tz = timezone(timedelta(seconds=offset_seconds))
         dt = dt.replace(tzinfo=tz)
         return int(dt.timestamp())
 

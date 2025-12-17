@@ -8,6 +8,8 @@ from typing import Callable, Optional
 import vlc
 from PySide6 import QtCore, QtWidgets
 
+# Widgets Qt pour embarquer VLC et afficher playlist/EPG dans le lecteur intégré.
+
 
 # -------------------------
 # Modèle léger pour la playlist du lecteur
@@ -28,6 +30,7 @@ class CollapsibleBox(QtWidgets.QWidget):
     Un groupe vraiment repliable:
       - header cliquable avec flèche
       - contenu visible/caché (ne prend plus de place quand replié)
+      - utilisé pour structurer playlist / now-next / guide
     """
 
     def __init__(self, title: str, parent=None, *, checked: bool = True):
@@ -348,6 +351,7 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         get_now_next: Optional[Callable[[str, int], tuple[Optional[dict], Optional[dict]]]] = None,
         list_programs: Optional[Callable[[str, int, int, int], list[dict]]] = None,
     ):
+        """Brancher les callbacks EPG (DB) puis rafraîchir now/next + guide."""
         self._get_now_next = get_now_next
         self._list_programs = list_programs
         self.refresh_now_next()

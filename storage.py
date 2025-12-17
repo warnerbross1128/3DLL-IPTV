@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
 
+# Persistance SQLite pour playlists, chaînes et EPG (tables simples, aucune dépendance réseau).
 
 @dataclass
 class PlaylistRec:
@@ -22,12 +23,14 @@ class EpgSourceRec:
 
 
 class Storage:
+    """Wrapper léger autour de sqlite3 pour stocker playlists/chaînes et données EPG."""
     def __init__(self, db_path: str | Path = "data/iptv.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
+        # WAL + FK pour réduire le locking et garantir l'intégrité.
         con = sqlite3.connect(self.db_path)
         con.execute("PRAGMA journal_mode=WAL;")
         con.execute("PRAGMA foreign_keys=ON;")
@@ -187,6 +190,7 @@ class Storage:
     def upsert_epg_programs(self, programs: Iterable[dict], chunk: int = 5000) -> None:
         """
         programs: iterable de dict {tvg_id, start_ts, stop_ts, title, desc}
+        Insert chunked pour éviter de charger tout le guide en mémoire.
         """
         con = self._connect()
         try:
@@ -220,6 +224,7 @@ class Storage:
     def get_now_next(self, tvg_id: str, now_ts: int) -> tuple[Optional[dict], Optional[dict]]:
         """
         Retourne (now, next) pour un tvg_id donné.
+        Requêtes indexées pour un affichage rapide (player/onglet EPG).
         """
         con = self._connect()
         try:

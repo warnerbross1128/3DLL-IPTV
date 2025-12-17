@@ -13,6 +13,7 @@ from PySide6 import QtCore, QtWidgets
 
 from core.models import Channel
 from core.m3u import parse_m3u, write_m3u
+from core.risk_scoring import score_channels
 from workers.probe_worker import ProbeWorker
 
 from imbed_vlc import VlcPlayerPanel
@@ -43,6 +44,7 @@ def strip_tags(s: str) -> str:
 
 
 def fetch_playlists_index(timeout=15) -> dict:
+    """Download iptv-org/PLAYLISTS.md and bucket playlist URLs by section names."""
     text = requests.get(PLAYLISTS_MD_RAW, timeout=timeout).text
     buckets = {"Category": [], "Language": [], "Country": [], "Subdivision/City": []}
 
@@ -144,6 +146,8 @@ def fetch_playlists_index(timeout=15) -> dict:
 # =========================
 
 class EpgDialog(QtWidgets.QDialog):
+    """Modal dialog to browse EPG entries for a single tvg-id."""
+
     def __init__(self, parent: QtWidgets.QWidget, db: Storage, tvg_id: str, channel_name: str):
         super().__init__(parent)
         self.db = db
@@ -235,6 +239,10 @@ class EpgDialog(QtWidgets.QDialog):
 # =========================
 
 class MainWindow(QtWidgets.QMainWindow):
+    """
+    Main UI container: playlists browser (GitHub), playlist editor, VLC player, and Salon
+    (local DB). Coordinates network downloads, EPG import, and background probes.
+    """
     playlists_loaded = QtCore.Signal(dict)
     playlists_error = QtCore.Signal(str)
     import_merged = QtCore.Signal(str, str)
@@ -335,8 +343,8 @@ class MainWindow(QtWidgets.QMainWindow):
         filt.addWidget(self.search)
 
         # Table chaînes
-        self.table = QtWidgets.QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["Nom", "Groupe", "tvg-id", "Statut", "URL"])
+        self.table = QtWidgets.QTableWidget(0, 6)
+        self.table.setHorizontalHeaderLabels(["Nom", "Groupe", "tvg-id", "Risque", "Statut", "URL"])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -491,6 +499,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.logln("Salon: playlist vide.")
             return
 
+        self._log_risk_overview(channels)
         try:
             self.player_widget.set_channels_from_objects(channels)
         except Exception as e:
@@ -522,6 +531,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.logln("Salon: playlist vide.")
             return
 
+        self._log_risk_overview(channels)
         # ✅ charge dans l’éditeur (onglet Chaînes)
         self.channels = channels
         self.refresh_table(self.channels)
@@ -537,7 +547,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # -------- VLC --------
 
     def on_channel_double_clicked(self, row: int, col: int):
-        item = self.table.item(row, 4)  # URL
+        item = self.table.item(row, 5)  # URL
         if not item:
             return
         url = item.text().strip()
@@ -563,6 +573,7 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 p = Path(raw)
 
+                # If the target is a local npm repo, generate XMLTV locally; otherwise download the remote feed.
                 if p.exists() and p.is_dir() and (p / "package.json").exists():
                     self.logln(f"EPG: génération via repo npm: {p}")
 
@@ -702,8 +713,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.table.setItem(row, 0, QtWidgets.QTableWidgetItem(ch.name))
             self.table.setItem(row, 1, QtWidgets.QTableWidgetItem(ch.group))
             self.table.setItem(row, 2, QtWidgets.QTableWidgetItem(ch.tvg_id))
-            self.table.setItem(row, 3, QtWidgets.QTableWidgetItem(ch.status))
-            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(ch.url))
+            risk_txt = f"{ch.risk_badge} {ch.risk_level} ({int(round(ch.risk_score))}/100)"
+            risk_item = QtWidgets.QTableWidgetItem(risk_txt)
+            if ch.risk_reasons:
+                risk_item.setToolTip(ch.risk_reasons)
+            self.table.setItem(row, 3, risk_item)
+            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(ch.status))
+            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(ch.url))
         self.table.resizeColumnsToContents()
 
     def get_filtered_channels(self) -> list[Channel]:
@@ -712,7 +728,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return list(self.channels)
         out = []
         for ch in self.channels:
-            hay = f"{ch.name} {ch.group} {ch.tvg_id} {ch.status} {ch.url}".lower()
+            hay = f"{ch.name} {ch.group} {ch.tvg_id} {ch.status} {ch.url} {ch.risk_level} {ch.risk_reasons} {ch.risk_score}".lower()
             if q in hay:
                 out.append(ch)
         return out
@@ -725,13 +741,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
         filtered = []
         for ch in self.channels:
-            hay = f"{ch.name} {ch.group} {ch.tvg_id} {ch.status} {ch.url}".lower()
+            hay = f"{ch.name} {ch.group} {ch.tvg_id} {ch.status} {ch.url} {ch.risk_level} {ch.risk_reasons} {ch.risk_score}".lower()
             if q in hay:
                 filtered.append(ch)
         self.refresh_table(filtered)
 
+    def _log_risk_overview(self, channels: list[Channel]):
+        # Compute risk badges for the current set and log a compact summary.
+        assessments = score_channels(channels)
+        if not assessments:
+            return assessments
+
+        counts = {"🟢": 0, "🟡": 0, "🔴": 0}
+        for a in assessments:
+            if a.badge in counts:
+                counts[a.badge] += 1
+
+        self.logln(
+            f"Risque (indicatif, informatif uniquement): {counts['🔴']} 🔴 / {counts['🟡']} 🟡 / {counts['🟢']} 🟢"
+        )
+        return assessments
+
     def import_m3u_text(self, text: str, label: str = ""):
         self.channels = parse_m3u(text)
+        self._log_risk_overview(self.channels)
         try:
             self.player_widget.set_channels_from_objects(self.channels)
         except Exception:
@@ -823,10 +856,10 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(int, str)
     def on_probe_progress(self, row: int, status: str):
         self.channels[row].status = status
-        item = self.table.item(row, 3)
+        item = self.table.item(row, 4)
         if item is None:
             item = QtWidgets.QTableWidgetItem(status)
-            self.table.setItem(row, 3, item)
+            self.table.setItem(row, 4, item)
         else:
             item.setText(status)
 
@@ -864,7 +897,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for idx in sel:
             r = idx.row()
             name = self.table.item(r, 0).text()
-            url = self.table.item(r, 4).text()
+            url = self.table.item(r, 5).text()
             selected_keys.add((name, url))
 
         before = len(self.channels)
@@ -955,6 +988,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         def collect_urls(item: QtWidgets.QTreeWidgetItem) -> list[str]:
+            # Recursively walk the tree to gather playlist URLs from any selected node.
             urls = []
             u = item.text(1).strip()
             if u.startswith("http"):
@@ -990,6 +1024,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     merged_texts.append("")
                     self.playlists_error.emit(f"KO {url}: {e}")
 
+            # Merge simple: concatène toutes les lignes non vides (en gardant un seul EXTM3U).
             out = ["#EXTM3U"]
             for t in merged_texts:
                 for line in t.splitlines():

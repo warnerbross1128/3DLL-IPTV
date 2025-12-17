@@ -6,12 +6,14 @@ from typing import List
 
 from .models import Channel
 
+# Parsing/écriture minimalistes pour les playlists M3U (EXTINF + URL).
 
 EXTINF_NAME_RE = re.compile(r",\s*(.*)$")
 ATTR_RE = re.compile(r'(\w[\w\-]*)="([^"]*)"')
 
 
 def parse_extinf(extinf: str) -> dict:
+    """Extrait nom + attributs connus (groupe, tvg-id) depuis une ligne #EXTINF."""
     attrs = dict(ATTR_RE.findall(extinf))
     m = EXTINF_NAME_RE.search(extinf)
     name = (m.group(1).strip() if m else "").strip()
@@ -19,6 +21,7 @@ def parse_extinf(extinf: str) -> dict:
 
 
 def parse_m3u(text: str) -> List[Channel]:
+    """Convertit le texte M3U en objets Channel (garde extinf brute + url)."""
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     out: List[Channel] = []
     i = 0
@@ -43,6 +46,7 @@ def parse_m3u(text: str) -> List[Channel]:
 
 
 def write_m3u(channels: List[Channel], path: Path):
+    """Écrit une playlist M3U minimale à partir d'une liste de Channel."""
     with path.open("w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
         for ch in channels:
