@@ -12,7 +12,7 @@ class Channel:
     name: str = ""
     group: str = ""
     tvg_id: str = ""
-    status: str = "ƒ?""   # OK / KO / ƒ?"
+    status: str = "—"  # OK / KO / —
     # Scoring indicatif (aucune décision automatique)
     risk_score: float = 0.0
     risk_level: str = "Inconnu"
