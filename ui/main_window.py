@@ -1,6 +1,7 @@
 # ui/main_window.py
 from __future__ import annotations
 
+import json
 import re
 import sys
 import threading
@@ -9,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from core.models import Channel
 from core.m3u import parse_m3u, write_m3u
@@ -21,6 +22,8 @@ from storage import Storage
 from epg_xmltv import download_xmltv, iter_programs
 from epg_npm_bridge import generate_xmltv_for_tvg_ids
 from salon_tab import SalonTab
+from ui.settings_tab import SettingsTab
+from ui.themes import discover_themes
 
 
 # =========================
@@ -257,6 +260,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("IPTV Cleaner (PySide6)")
         self.resize(1200, 720)
 
+        self.config_path = Path("data/config.json")
+        self._current_style = "Fusion"
+        self._current_theme = "light"
+
         self.channels: list[Channel] = []
         self._probe_thread: QtCore.QThread | None = None
         self._probe_worker: ProbeWorker | None = None
@@ -343,8 +350,8 @@ class MainWindow(QtWidgets.QMainWindow):
         filt.addWidget(self.search)
 
         # Table chaînes
-        self.table = QtWidgets.QTableWidget(0, 6)
-        self.table.setHorizontalHeaderLabels(["Nom", "Groupe", "tvg-id", "Risque", "Statut", "URL"])
+        self.table = QtWidgets.QTableWidget(0, 7)
+        self.table.setHorizontalHeaderLabels(["Nom", "Groupe", "tvg-id", "Risque", "Raisons", "Statut", "URL"])
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -379,16 +386,13 @@ class MainWindow(QtWidgets.QMainWindow):
         vc.addWidget(epg_box, 0)
         self.tabs.addTab(tab_channels, "Chaînes")
 
-        # ---- Tab 3: VLC Player
+        # ---- Tab 3: VLC Player (création paresseuse)
         tab_player = QtWidgets.QWidget()
-        vp = QtWidgets.QVBoxLayout(tab_player)
-
-        self.player_widget = VlcPlayerPanel(
-            get_now_next=self.db.get_now_next,
-            list_programs=self.db.list_epg_programs,
-            log=self.logln,
-        )
-        vp.addWidget(self.player_widget, 1)
+        self._player_layout = QtWidgets.QVBoxLayout(tab_player)
+        self.player_widget: VlcPlayerPanel | None = None
+        self._player_placeholder = QtWidgets.QLabel("Lecteur VLC chargé au premier usage.")
+        self._player_placeholder.setAlignment(QtCore.Qt.AlignCenter)
+        self._player_layout.addWidget(self._player_placeholder, 1)
         self.tabs.addTab(tab_player, "Lecteur")
 
         # ---- Tab 4: Salon (Quickload)
@@ -396,6 +400,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.salon_tab.quickload_requested.connect(self.on_salon_quickload)
         self.salon_tab.edit_requested.connect(self.on_salon_open_in_editor)
         self.tabs.addTab(self.salon_tab, "Salon")
+
+        # ---- Tab 5: Configuration (thème/style)
+        self._theme_specs = discover_themes()
+        self._available_themes = list(self._theme_specs.keys())
+        cfg = self._load_user_config()
+        initial_theme = cfg.get("theme") if cfg.get("theme") in self._available_themes else (self._available_themes[0] if self._available_themes else "light")
+        initial_style = cfg.get("style") if cfg.get("style") else "Fusion"
+        self._current_theme = initial_theme
+        self._current_style = initial_style
+        styles = [s for s in QtWidgets.QStyleFactory.keys() if s.lower() != "windowsvista"]
+        if not styles:
+            styles = ["Fusion", "Windows"]
+
+        self.settings_tab = SettingsTab(
+            self,
+            themes=self._available_themes,
+            initial_theme=initial_theme,
+            styles=styles,
+            initial_style=initial_style,
+        )
+        self.settings_tab.theme_changed.connect(self.on_theme_changed)
+        self.settings_tab.style_changed.connect(self.on_style_changed)
+        self.tabs.addTab(self.settings_tab, "Configuration")
+        # Appliquer la config dès le démarrage
+        self.on_style_changed(initial_style)
+        self.on_theme_changed(initial_theme)
 
         # ✅ Refresh Qt-safe (au démarrage)
         QtCore.QTimer.singleShot(0, self.salon_tab.refresh)
@@ -459,6 +489,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.epg_fail.connect(self.on_epg_fail)
 
         self.log_sig.connect(self.log.appendPlainText)
+        self.tabs.currentChanged.connect(self._on_tab_changed)
 
         self._playlists_index = None
         self._all_tree_items: list[tuple[QtWidgets.QTreeWidgetItem, str]] = []
@@ -474,6 +505,76 @@ class MainWindow(QtWidgets.QMainWindow):
             self.vsplit.setSizes([600, 160])
         else:
             self.vsplit.setSizes([1, self._log_collapsed_h])
+
+    def _on_tab_changed(self, idx: int):
+        if idx == 2:  # Lecteur
+            self._ensure_player_widget()
+
+    def _ensure_player_widget(self) -> VlcPlayerPanel:
+        if self.player_widget is not None:
+            return self.player_widget
+
+        try:
+            self._player_placeholder.setText("Chargement du lecteur...")
+        except Exception:
+            pass
+
+        pw = VlcPlayerPanel(
+            get_now_next=self.db.get_now_next,
+            list_programs=self.db.list_epg_programs,
+            log=self.logln,
+        )
+
+        # Remplace le placeholder par le lecteur instancié
+        while self._player_layout.count():
+            item = self._player_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+        self._player_layout.addWidget(pw, 1)
+
+        self.player_widget = pw
+
+        # Si des chaînes/EPG sont déjà chargés, on alimente le lecteur.
+        if self.channels:
+            try:
+                pw.set_channels_from_objects(self.channels)
+            except Exception:
+                pass
+        if self.epg_loaded:
+            try:
+                pw.set_epg_callbacks(
+                    get_now_next=self.db.get_now_next,
+                    list_programs=self.db.list_epg_programs,
+                )
+            except Exception:
+                pass
+
+        return pw
+
+    # -------- Settings --------
+
+    def on_theme_changed(self, theme: str):
+        """Applique une palette claire/sombre simple sur l'application."""
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            return
+
+        # Style actuel (géré séparément)
+        spec = self._theme_specs.get(theme) or next(iter(self._theme_specs.values()))
+        pal = spec.palette
+        app.setPalette(pal)
+        self._current_theme = theme
+        self._save_user_config()
+
+    def on_style_changed(self, style_name: str):
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            return
+        if style_name and style_name in QtWidgets.QStyleFactory.keys():
+            app.setStyle(style_name)
+            self._current_style = style_name
+            self._save_user_config()
 
     # -------- Salon --------
 
@@ -500,8 +601,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         self._log_risk_overview(channels)
+        player = self._ensure_player_widget()
         try:
-            self.player_widget.set_channels_from_objects(channels)
+            player.set_channels_from_objects(channels)
         except Exception as e:
             self.logln(f"Salon: erreur player: {e}")
             return
@@ -547,7 +649,7 @@ class MainWindow(QtWidgets.QMainWindow):
     # -------- VLC --------
 
     def on_channel_double_clicked(self, row: int, col: int):
-        item = self.table.item(row, 5)  # URL
+        item = self.table.item(row, 6)  # URL
         if not item:
             return
         url = item.text().strip()
@@ -555,7 +657,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         self.logln(f"Lecture: {url}")
-        self.player_widget.play_url(url)
+        player = self._ensure_player_widget()
+        player.play_url(url)
         self.tabs.setCurrentIndex(2)
 
     # -------- EPG --------
@@ -604,13 +707,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_epg_update.setEnabled(True)
         self.btn_epg_guide.setEnabled(True)
         self.logln("EPG: import OK.")
-        try:
-            self.player_widget.set_epg_callbacks(
-                get_now_next=self.db.get_now_next,
-                list_programs=self.db.list_epg_programs,
-            )
-        except Exception:
-            pass
+        if self.player_widget is not None:
+            try:
+                self.player_widget.set_epg_callbacks(
+                    get_now_next=self.db.get_now_next,
+                    list_programs=self.db.list_epg_programs,
+                )
+            except Exception:
+                pass
         self.on_channel_selected()
 
     @QtCore.Slot(str)
@@ -697,7 +801,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 pass
 
         try:
-            if hasattr(self, "player_widget"):
+            if getattr(self, "player_widget", None) is not None:
                 self.player_widget.shutdown()
         except Exception:
             pass
@@ -718,8 +822,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if ch.risk_reasons:
                 risk_item.setToolTip(ch.risk_reasons)
             self.table.setItem(row, 3, risk_item)
-            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(ch.status))
-            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(ch.url))
+            self.table.setItem(row, 4, QtWidgets.QTableWidgetItem(ch.risk_reasons))
+            self.table.setItem(row, 5, QtWidgets.QTableWidgetItem(ch.status))
+            self.table.setItem(row, 6, QtWidgets.QTableWidgetItem(ch.url))
         self.table.resizeColumnsToContents()
 
     def get_filtered_channels(self) -> list[Channel]:
@@ -765,10 +870,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def import_m3u_text(self, text: str, label: str = ""):
         self.channels = parse_m3u(text)
         self._log_risk_overview(self.channels)
-        try:
-            self.player_widget.set_channels_from_objects(self.channels)
-        except Exception:
-            pass
+        if self.player_widget is not None:
+            try:
+                self.player_widget.set_channels_from_objects(self.channels)
+            except Exception:
+                pass
         self.logln(f"Importé: {len(self.channels)} chaînes {('(' + label + ')') if label else ''}")
         self.apply_filter()
         self.tabs.setCurrentIndex(1)
@@ -789,12 +895,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if not ok or not url.strip():
             return
         url = url.strip()
-        try:
-            self.logln(f"Téléchargement: {url}")
-            text = requests.get(url, timeout=20).text
-            self.import_m3u_text(text, url)
-        except Exception as e:
-            self.logln(f"Erreur téléchargement: {e}")
+        self.btn_load_url.setEnabled(False)
+        self.logln(f"Téléchargement: {url}")
+
+        def run():
+            try:
+                text = requests.get(url, timeout=20).text
+                self.import_merged.emit(text, url)
+            except Exception as e:
+                self.logln(f"Erreur téléchargement: {e}")
+            finally:
+                QtCore.QTimer.singleShot(0, self, lambda: self.btn_load_url.setEnabled(True))
+
+        threading.Thread(target=run, daemon=True).start()
 
     def on_test(self):
         if not self.channels:
@@ -856,10 +969,10 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(int, str)
     def on_probe_progress(self, row: int, status: str):
         self.channels[row].status = status
-        item = self.table.item(row, 4)
+        item = self.table.item(row, 5)
         if item is None:
             item = QtWidgets.QTableWidgetItem(status)
-            self.table.setItem(row, 4, item)
+            self.table.setItem(row, 5, item)
         else:
             item.setText(status)
 
@@ -897,7 +1010,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for idx in sel:
             r = idx.row()
             name = self.table.item(r, 0).text()
-            url = self.table.item(r, 5).text()
+            url = self.table.item(r, 6).text()
             selected_keys.add((name, url))
 
         before = len(self.channels)
@@ -1040,3 +1153,22 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(str, str)
     def _import_merged(self, text: str, label: str):
         self.import_m3u_text(text, label)
+
+    # -------------------------
+    # Config persistante
+    # -------------------------
+    def _load_user_config(self) -> dict:
+        try:
+            if self.config_path.exists():
+                return json.loads(self.config_path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        return {}
+
+    def _save_user_config(self):
+        try:
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            data = {"theme": self._current_theme, "style": self._current_style}
+            self.config_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        except Exception:
+            pass

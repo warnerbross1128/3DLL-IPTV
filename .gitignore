@@ -41,6 +41,7 @@ Thumbs.db
 
 # TESTS
 TESTS/
+TESTS/*.py
 
 # todo files
 todo.md

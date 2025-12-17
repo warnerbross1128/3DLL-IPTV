@@ -10,6 +10,15 @@ from .models import Channel
 
 # Estimation de risque purement heuristique (offline) pour donner un signal visuel à l'utilisateur.
 
+
+def _tag(msg: str, delta: float) -> str:
+    """Préfixe un message avec un indicateur simple selon l'impact sur le score."""
+    if delta > 0:
+        return f"⚠ {msg}"
+    if delta < 0:
+        return f"✓ {msg}"
+    return f"• {msg}"
+
 # Domain/TLD heuristics (deliberately static: no network calls).
 SUSPICIOUS_TLDS = {
     "xyz",
@@ -118,65 +127,65 @@ def assess_channel_risk(ch: Channel) -> RiskAssessment:
     # Scheme
     if not parsed.scheme:
         score += 35
-        reasons.append("URL incomplète ou sans schéma.")
+        reasons.append(_tag("URL incomplète ou sans schéma.", 35))
         return _finalize(score, reasons)  # can't go further
     if parsed.scheme not in {"http", "https"}:
         score += 10
-        reasons.append(f"Schéma non standard ({parsed.scheme}).")
+        reasons.append(_tag(f"Schéma non standard ({parsed.scheme}).", 10))
     if parsed.scheme == "http":
         score += 12
-        reasons.append("Flux non chiffré (http).")
+        reasons.append(_tag("Flux non chiffré (http).", 12))
 
     host = (parsed.hostname or "").lower()
     tld = host.rsplit(".", 1)[-1] if "." in host else ""
 
     if not host:
         score += 25
-        reasons.append("Hôte manquant dans l'URL.")
+        reasons.append(_tag("Hôte manquant dans l'URL.", 25))
     elif _is_ip(host):
         score += 20
-        reasons.append("Flux servi depuis une IP brute (pas de domaine).")
+        reasons.append(_tag("Flux servi depuis une IP brute (pas de domaine).", 20))
     else:
         if tld in SUSPICIOUS_TLDS:
             score += 12
-            reasons.append(f"TLD fréquent sur flux non officiels ({tld}).")
+            reasons.append(_tag(f"TLD fréquent sur flux non officiels ({tld}).", 12))
         if tld in LOWER_RISK_TLDS:
             score -= 4
-            reasons.append(f"TLD aligné sur pays courant ({tld}).")
+            reasons.append(_tag(f"TLD aligné sur pays courant ({tld}).", -4))
 
         for kw in LOWER_RISK_HOST_KEYWORDS:
             if kw in host:
                 score -= 6
-                reasons.append(f"Hébergement CDN connu ({kw}).")
+                reasons.append(_tag(f"Hébergement CDN connu ({kw}).", -6))
                 break
         for kw in HIGHER_RISK_HOST_KEYWORDS:
             if kw in host:
                 score += 8
-                reasons.append(f"Mot-clé hôte indicatif de restream ({kw}).")
+                reasons.append(_tag(f"Mot-clé hôte indicatif de restream ({kw}).", 8))
                 break
 
     # Port
     if parsed.port and parsed.port not in {80, 443, 1935, 8080}:
         score += 6
-        reasons.append(f"Port non standard ({parsed.port}).")
+        reasons.append(_tag(f"Port non standard ({parsed.port}).", 6))
 
     # Path / filename hints
     path = (parsed.path or "").lower()
     for kw in HIGHER_RISK_PATH_KEYWORDS:
         if kw in path:
             score += 5
-            reasons.append(f"Mot-clé chemin ({kw}).")
+            reasons.append(_tag(f"Mot-clé chemin ({kw}).", 5))
             break
     if path.endswith(".m3u8"):
         score -= 2
-        reasons.append("Chemin HLS explicite (.m3u8).")
+        reasons.append(_tag("Chemin HLS explicite (.m3u8).", -2))
 
     # Channel metadata signals (category/type)
     name_lower = f"{ch.name} {ch.group}".lower()
     for kw in CATEGORY_RISK_KEYWORDS:
         if kw.lower() in name_lower:
             score += 6
-            reasons.append(f"Libellé sensible ({kw}).")
+            reasons.append(_tag(f"Libellé sensible ({kw}).", 6))
             break
 
     # Geo consistency between tvg-id hint and host TLD
@@ -185,10 +194,10 @@ def assess_channel_risk(ch: Channel) -> RiskAssessment:
     if country_hint and host_country:
         if country_hint != host_country:
             score += 5
-            reasons.append(f"Hébergement {host_country} ≠ pays annoncé {country_hint}.")
+            reasons.append(_tag(f"Hébergement {host_country} ≠ pays annoncé {country_hint}.", 5))
         else:
             score -= 3
-            reasons.append("Pays du flux cohérent avec l'identifiant de chaîne.")
+            reasons.append(_tag("Pays du flux cohérent avec l'identifiant de chaîne.", -3))
 
     return _finalize(score, reasons)
 
