@@ -38,3 +38,6 @@ epg/
 # OS / editeurs
 .DS_Store
 Thumbs.db
+
+# TESTS
+TESTS/
