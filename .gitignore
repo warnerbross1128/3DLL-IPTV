@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+*.dylib
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.cache/
+*.log
+
+# Environnements
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Donnees locales
+data/*.db
+Archives/
+V0.0.zip
+
+# Fichiers generes EPG/Node
+epg/node_modules/
+epg/temp/
+epg/channels.xml
+epg/custom.xml
+epg/guide.xml*
+epg/.secrets
+epg/
+
+# OS / editeurs
+.DS_Store
+Thumbs.db
