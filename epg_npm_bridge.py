@@ -17,6 +17,52 @@ def _default_log(msg: str) -> None:
     print(msg, flush=True)
 
 
+def _canonical_id(value: str) -> str:
+    """
+    Clé canonique pour faire correspondre playlist tvg-id <-> xmltv_id du repo EPG.
+    On ignore les suffixes '@...' (souvent @SD/@HD dans iptv-org/epg) et on compare en case-insensitive.
+    """
+    v = (value or "").strip()
+    if not v:
+        return ""
+    base = v.split("@", 1)[0].strip()
+    return base.casefold()
+
+
+def _wanted_map(tvg_ids: Iterable[str]) -> dict[str, str]:
+    """
+    Retourne {canonical_id: tvg_id_original} (le tvg_id_original est celui de la playlist).
+    """
+    out: dict[str, str] = {}
+    for t in tvg_ids:
+        t = (t or "").strip()
+        if not t:
+            continue
+        k = _canonical_id(t)
+        if k and k not in out:
+            out[k] = t
+    return out
+
+
+def _quality_rank(xmltv_id: str) -> int:
+    x = (xmltv_id or "").upper()
+    if "@HD" in x:
+        return 2
+    if "@SD" in x:
+        return 1
+    return 0
+
+
+def _env_int(name: str, default: int) -> int:
+    v = (os.environ.get(name) or "").strip()
+    if not v:
+        return default
+    try:
+        return int(v)
+    except Exception:
+        return default
+
+
 def _which_npm() -> str:
     """
     Windows: npm est souvent npm.cmd (fichier batch)
@@ -42,35 +88,68 @@ def find_sites_for_tvg_ids(repo: str | Path, tvg_ids: Iterable[str], log: LogFn 
     if not sites_dir.exists():
         raise FileNotFoundError(f"Repo EPG invalide: {sites_dir} introuvable")
 
-    wanted = {t.strip() for t in tvg_ids if t and t.strip()}
+    wanted = _wanted_map(tvg_ids)
     if not wanted:
         return []
+    wanted_keys = set(wanted.keys())
 
-    hits: dict[str, int] = {}
+    coverage: dict[str, set[str]] = {}
     for ch_xml in sites_dir.glob("*/*.channels.xml"):
+        site = ch_xml.parent.name
         try:
-            txt = ch_xml.read_text(encoding="utf-8", errors="ignore")
+            tree = ET.parse(str(ch_xml))
+            root = tree.getroot()
         except Exception:
             continue
 
-        matched_any = False
-        for t in wanted:
-            if t in txt:
-                matched_any = True
-                break
-        if not matched_any:
-            continue
+        matched: set[str] = set()
+        for ch in root.findall("channel"):
+            xmltv_id = (ch.attrib.get("xmltv_id") or "").strip()
+            k = _canonical_id(xmltv_id)
+            if k and k in wanted_keys:
+                matched.add(k)
+        if matched:
+            coverage[site] = matched
 
-        site = ch_xml.parent.name
-        count = 0
-        for t in wanted:
-            if t in txt:
-                count += 1
-        hits[site] = hits.get(site, 0) + count
+    if not coverage:
+        log("[EPG] Aucun site trouvé pour ces tvg-id.")
+        return []
 
-    sites = sorted(hits.keys(), key=lambda s: hits[s], reverse=True)
-    log(f"[EPG] Sites trouvés: {sites}" if sites else "[EPG] Aucun site trouvé pour ces tvg-id.")
-    return sites
+    candidates = sorted(coverage.keys(), key=lambda s: len(coverage[s]), reverse=True)
+    log(f"[EPG] Sites candidats: {candidates}")
+
+    # Réduction: greedy set cover pour éviter de lancer 50+ sites quand un seul en couvre déjà la majorité.
+    remaining = set(wanted_keys)
+    selected: list[str] = []
+    max_sites = _env_int("IPTV_EPG_MAX_SITES", 12)
+    if max_sites <= 0:
+        log("[EPG] IPTV_EPG_MAX_SITES<=0 -> pas de limite, tous les sites candidats seront tentés.")
+        return candidates
+    while remaining and len(selected) < max_sites:
+        best_site = ""
+        best_gain = 0
+        for s in candidates:
+            if s in selected:
+                continue
+            gain = len(coverage[s] & remaining)
+            if gain > best_gain:
+                best_gain = gain
+                best_site = s
+        if best_gain == 0:
+            break
+        selected.append(best_site)
+        remaining -= coverage[best_site]
+
+    covered = len(wanted_keys) - len(remaining)
+    total = len(wanted_keys)
+    pct = int((covered / total) * 100) if total else 0
+    log(f"[EPG] Sites sélectionnés ({len(selected)}): {selected} (couverture {covered}/{total} ~{pct}%)")
+    if remaining:
+        sample = [wanted[k] for k in list(sorted(remaining))[:12] if k in wanted]
+        if sample:
+            log(f"[EPG] Non couverts (exemples): {sample}")
+
+    return selected
 
 
 def _build_npm_command(npm_path: str, args: list[str]) -> list[str]:
@@ -210,9 +289,10 @@ def build_custom_channels_xml(repo: str | Path, site: str, tvg_ids: Iterable[str
     """
     repo = Path(repo)
     out_path = Path(out_path)
-    wanted = {t.strip() for t in tvg_ids if t and t.strip()}
+    wanted = _wanted_map(tvg_ids)
     if not wanted:
         raise RuntimeError("Aucun tvg-id fourni")
+    wanted_keys = set(wanted.keys())
 
     src = repo / "sites" / site / f"{site}.channels.xml"
     if not src.exists():
@@ -224,14 +304,31 @@ def build_custom_channels_xml(repo: str | Path, site: str, tvg_ids: Iterable[str
     out_root = ET.Element("channels")
     kept = 0
 
+    best: dict[str, tuple[int, ET.Element]] = {}
     for ch in root.findall("channel"):
         xmltv_id = (ch.attrib.get("xmltv_id") or "").strip()
-        if xmltv_id in wanted:
-            out_root.append(ch)
-            kept += 1
+        k = _canonical_id(xmltv_id)
+        if not k or k not in wanted_keys:
+            continue
+        rank = _quality_rank(xmltv_id)
+        cur = best.get(k)
+        if cur is None or rank > cur[0]:
+            best[k] = (rank, ch)
+
+    for k, (_, ch) in best.items():
+        # Copie de l'élément pour pouvoir réécrire xmltv_id sans toucher au fichier source.
+        attrib = dict(ch.attrib)
+        attrib["xmltv_id"] = wanted[k]
+        out_ch = ET.Element("channel", attrib=attrib)
+        out_ch.text = ch.text
+        out_root.append(out_ch)
+        kept += 1
 
     if kept == 0:
-        raise RuntimeError(f"Aucun channel match dans {src} pour ces tvg-id")
+        raise RuntimeError(
+            f"Aucun channel match dans {src} pour ces tvg-id "
+            f"(astuce: xmltv_id peut contenir @SD/@HD)."
+        )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     ET.ElementTree(out_root).write(str(out_path), encoding="utf-8", xml_declaration=True)

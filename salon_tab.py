@@ -52,10 +52,11 @@ class SalonTab(QtWidgets.QWidget):
         # Table playlists
         # ======================
         self.tbl = QtWidgets.QTableWidget(0, 3)
-        self.tbl.setHorizontalHeaderLabels(["ID", "Nom", "URL"])
+        self.tbl.setHorizontalHeaderLabels(["#", "Nom", "Source"])
         self.tbl.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.tbl.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.tbl.setSortingEnabled(True)
+        # On évite le tri pour garder la correspondance visible <-> ID simple
+        self.tbl.setSortingEnabled(False)
         self.tbl.verticalHeader().setVisible(False)
         layout.addWidget(self.tbl, 1)
 
@@ -97,16 +98,25 @@ class SalonTab(QtWidgets.QWidget):
         self._visible_rows.clear()
 
         for i, rec in enumerate(self._rows):
-            hay = f"{rec.id} {rec.name} {rec.url}".lower()
+            hay = f"{rec.id} {rec.name} {rec.url} {getattr(rec, 'epg_url', '')}".lower()
             if (not q) or (q in hay):
                 self._visible_rows.append(i)
 
         self.tbl.setRowCount(len(self._visible_rows))
         for r, src_i in enumerate(self._visible_rows):
             rec = self._rows[src_i]
-            self.tbl.setItem(r, 0, QtWidgets.QTableWidgetItem(str(rec.id)))
-            self.tbl.setItem(r, 1, QtWidgets.QTableWidgetItem(rec.name))
-            self.tbl.setItem(r, 2, QtWidgets.QTableWidgetItem(rec.url))
+            idx_item = QtWidgets.QTableWidgetItem(str(r + 1))
+            idx_item.setData(QtCore.Qt.ItemDataRole.UserRole, rec.id)
+            self.tbl.setItem(r, 0, idx_item)
+
+            name_txt = rec.name or f"Playlist #{rec.id}"
+            name_item = QtWidgets.QTableWidgetItem(name_txt)
+            src_item = QtWidgets.QTableWidgetItem(rec.url)
+            epg = getattr(rec, "epg_url", "") or ""
+            if epg:
+                src_item.setToolTip(f"EPG: {epg}")
+            self.tbl.setItem(r, 1, name_item)
+            self.tbl.setItem(r, 2, src_item)
 
         self.tbl.resizeColumnsToContents()
         self._sel_changed()
@@ -128,8 +138,9 @@ class SalonTab(QtWidgets.QWidget):
         item = self.tbl.item(row, 0)
         if not item:
             return None
+        pid = item.data(QtCore.Qt.ItemDataRole.UserRole)
         try:
-            return int(item.text())
+            return int(pid)
         except Exception:
             return None
 

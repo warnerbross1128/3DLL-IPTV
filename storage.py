@@ -4,6 +4,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
+import json
 
 # Persistance SQLite pour playlists, chaînes et EPG (tables simples, aucune dépendance réseau).
 
@@ -12,6 +13,7 @@ class PlaylistRec:
     id: int
     name: str
     url: str
+    epg_url: str
 
 
 @dataclass
@@ -45,6 +47,7 @@ class Storage:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     url  TEXT NOT NULL,
+                    epg_url TEXT DEFAULT '',
                     created_at TEXT DEFAULT (datetime('now'))
                 );
 
@@ -55,7 +58,8 @@ class Storage:
                     group_title TEXT,
                     tvg_id TEXT,
                     url TEXT,
-                    extinf TEXT
+                    extinf TEXT,
+                    vlc_opts TEXT  -- JSON array (list of strings)
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_channels_playlist ON channels(playlist_id);
@@ -80,6 +84,23 @@ class Storage:
                 CREATE INDEX IF NOT EXISTS idx_epg_tvg_start ON epg_programs(tvg_id, start_ts);
                 """
             )
+
+            # Migration souple: ajouter vlc_opts si absent
+            cols = {r[1] for r in con.execute("PRAGMA table_info(channels)").fetchall()}
+            if "vlc_opts" not in cols:
+                try:
+                    con.execute("ALTER TABLE channels ADD COLUMN vlc_opts TEXT")
+                except Exception:
+                    pass
+
+            # Migration souple: ajouter epg_url si absent
+            pcols = {r[1] for r in con.execute("PRAGMA table_info(playlists)").fetchall()}
+            if "epg_url" not in pcols:
+                try:
+                    con.execute("ALTER TABLE playlists ADD COLUMN epg_url TEXT DEFAULT ''")
+                except Exception:
+                    pass
+
             con.commit()
         finally:
             con.close()
@@ -87,10 +108,10 @@ class Storage:
     # -------------------------
     # Playlists + Channels
     # -------------------------
-    def add_playlist(self, name: str, url: str) -> int:
+    def add_playlist(self, name: str, url: str, epg_url: str = "") -> int:
         con = self._connect()
         try:
-            cur = con.execute("INSERT INTO playlists(name, url) VALUES (?,?)", (name, url))
+            cur = con.execute("INSERT INTO playlists(name, url, epg_url) VALUES (?,?,?)", (name, url, epg_url))
             con.commit()
             return int(cur.lastrowid)
         finally:
@@ -99,7 +120,7 @@ class Storage:
     def list_playlists(self) -> list[PlaylistRec]:
         con = self._connect()
         try:
-            rows = con.execute("SELECT id, name, url FROM playlists ORDER BY id DESC").fetchall()
+            rows = con.execute("SELECT id, name, url, COALESCE(epg_url, '') FROM playlists ORDER BY id DESC").fetchall()
             return [PlaylistRec(*r) for r in rows]
         finally:
             con.close()
@@ -114,15 +135,15 @@ class Storage:
 
     def replace_channels(self, playlist_id: int, channels: Iterable[dict]) -> None:
         """
-        channels: iterable de dict {name, group, tvg_id, url, extinf}
+        channels: iterable de dict {name, group, tvg_id, url, extinf, vlc_opts}
         """
         con = self._connect()
         try:
             con.execute("DELETE FROM channels WHERE playlist_id=?", (playlist_id,))
             con.executemany(
                 """
-                INSERT INTO channels(playlist_id, name, group_title, tvg_id, url, extinf)
-                VALUES (?,?,?,?,?,?)
+                INSERT INTO channels(playlist_id, name, group_title, tvg_id, url, extinf, vlc_opts)
+                VALUES (?,?,?,?,?,?,?)
                 """,
                 [
                     (
@@ -132,6 +153,7 @@ class Storage:
                         (c.get("tvg_id") or ""),
                         (c.get("url") or ""),
                         (c.get("extinf") or ""),
+                        json.dumps([str(v).strip() for v in (c.get("vlc_opts") or []) if str(v).strip()]),
                     )
                     for c in channels
                 ],
@@ -300,13 +322,13 @@ class Storage:
 
     def get_channels(self, playlist_id: int) -> list[dict]:
         """
-        Retourne list[dict] avec {name, group, tvg_id, url, extinf}
+        Retourne list[dict] avec {name, group, tvg_id, url, extinf, vlc_opts}
         """
         con = self._connect()
         try:
             rows = con.execute(
                 """
-                SELECT name, group_title, tvg_id, url, extinf
+                SELECT name, group_title, tvg_id, url, extinf, vlc_opts
                 FROM channels
                 WHERE playlist_id=?
                 ORDER BY id ASC
@@ -315,24 +337,32 @@ class Storage:
             ).fetchall()
 
             out = []
-            for (name, group_title, tvg_id, url, extinf) in rows:
+            for (name, group_title, tvg_id, url, extinf, vlc_opts) in rows:
+                opts = []
+                try:
+                    opts = json.loads(vlc_opts) if vlc_opts else []
+                    if not isinstance(opts, list):
+                        opts = []
+                except Exception:
+                    opts = []
                 out.append({
                     "name": name or "",
                     "group": group_title or "",
                     "tvg_id": tvg_id or "",
                     "url": url or "",
                     "extinf": extinf or "",
+                    "vlc_opts": opts,
                 })
             return out
         finally:
             con.close()
 
-    def update_playlist(self, playlist_id: int, name: str, url: str) -> None:
+    def update_playlist(self, playlist_id: int, name: str, url: str, epg_url: str = "") -> None:
         con = self._connect()
         try:
             con.execute(
-                "UPDATE playlists SET name=?, url=? WHERE id=?",
-                (name, url, int(playlist_id)),
+                "UPDATE playlists SET name=?, url=?, epg_url=? WHERE id=?",
+                (name, url, epg_url, int(playlist_id)),
             )
             con.commit()
         finally:
