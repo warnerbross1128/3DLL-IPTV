@@ -55,8 +55,7 @@ class SalonTab(QtWidgets.QWidget):
         self.tbl.setHorizontalHeaderLabels(["#", "Nom", "Source"])
         self.tbl.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.tbl.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        # On évite le tri pour garder la correspondance visible <-> ID simple
-        self.tbl.setSortingEnabled(False)
+        self.tbl.setSortingEnabled(True)
         self.tbl.verticalHeader().setVisible(False)
         layout.addWidget(self.tbl, 1)
 
@@ -102,6 +101,7 @@ class SalonTab(QtWidgets.QWidget):
             if (not q) or (q in hay):
                 self._visible_rows.append(i)
 
+        self.tbl.setSortingEnabled(False)
         self.tbl.setRowCount(len(self._visible_rows))
         for r, src_i in enumerate(self._visible_rows):
             rec = self._rows[src_i]
@@ -119,6 +119,7 @@ class SalonTab(QtWidgets.QWidget):
             self.tbl.setItem(r, 2, src_item)
 
         self.tbl.resizeColumnsToContents()
+        self.tbl.setSortingEnabled(True)
         self._sel_changed()
 
     # ======================

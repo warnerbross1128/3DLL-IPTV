@@ -6,7 +6,7 @@ import io
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
-from typing import Iterable
+from typing import Callable, Iterable
 
 import requests
 
@@ -18,15 +18,35 @@ Outils XMLTV: téléchargement d'un guide (XML/ZIP) puis parsing en flux pour in
 _DT_RE = re.compile(r"^(\d{14})")  # YYYYMMDDHHMMSS
 
 
-def download_xmltv(url: str, timeout: int = 90) -> bytes:
-    """Télécharge un flux XMLTV (support .gz) et renvoie les bytes décompressés."""
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    data = r.content
+def download_xmltv(url: str, timeout: int = 90, progress_cb: Callable[[int, int], None] | None = None) -> bytes:
+    """
+    Télécharge un flux XMLTV (support .gz) et renvoie les bytes décompressés.
+    progress_cb(read_bytes, total_bytes) est appelé périodiquement (total=0 si inconnu).
+    """
+    with requests.get(url, timeout=timeout, stream=True) as r:
+        r.raise_for_status()
+        total = int(r.headers.get("content-length") or 0)
+        buf = bytearray()
+        for chunk in r.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            buf.extend(chunk)
+            if progress_cb:
+                try:
+                    progress_cb(len(buf), total)
+                except Exception:
+                    pass
+        data = bytes(buf)
 
     # .gz support
     if url.lower().endswith(".gz") or data[:2] == b"\x1f\x8b":
         data = gzip.decompress(data)
+
+    if progress_cb:
+        try:
+            progress_cb(len(data), len(data))
+        except Exception:
+            pass
 
     return data
 

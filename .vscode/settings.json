@@ -1,0 +1,6 @@
+{
+    // Treat Qt Linguist translation files as XML to silence TypeScript parser errors
+    "files.associations": {
+        "**/i18n/*.ts": "xml"
+    }
+}

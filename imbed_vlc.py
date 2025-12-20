@@ -121,20 +121,23 @@ class EpgGridGuide(QtWidgets.QWidget):
         self.max_channels.setToolTip('Limite le nombre de chaines affichees pour garder le guide reactif.')
 
         self.btn_refresh = QtWidgets.QPushButton('Rafraichir')
+        self.btn_refresh.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
 
-        top = QtWidgets.QHBoxLayout()
-        top.addWidget(self.txt_filter, 2)
-        top.addSpacing(8)
-        top.addWidget(QtWidgets.QLabel('Debut'))
-        top.addWidget(self.dt_start)
-        top.addWidget(QtWidgets.QLabel('Heures'))
-        top.addWidget(self.hours)
-        top.addWidget(QtWidgets.QLabel('Pas (min)'))
-        top.addWidget(self.step)
-        top.addWidget(QtWidgets.QLabel('Max'))
-        top.addWidget(self.max_channels)
-        top.addStretch(1)
-        top.addWidget(self.btn_refresh)
+        top_row = QtWidgets.QHBoxLayout()
+        top_row.addWidget(self.txt_filter, 1)
+        top_row.addWidget(self.btn_refresh, 0, QtCore.Qt.AlignRight)
+
+        params_row = QtWidgets.QHBoxLayout()
+        params_row.setSpacing(6)
+        params_row.addWidget(QtWidgets.QLabel('Debut'))
+        params_row.addWidget(self.dt_start)
+        params_row.addWidget(QtWidgets.QLabel('Heures'))
+        params_row.addWidget(self.hours)
+        params_row.addWidget(QtWidgets.QLabel('Pas (min)'))
+        params_row.addWidget(self.step)
+        params_row.addWidget(QtWidgets.QLabel('Max'))
+        params_row.addWidget(self.max_channels)
+        params_row.addStretch(1)
 
         self.tbl = QtWidgets.QTableWidget(0, 0)
         self.tbl.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -159,7 +162,8 @@ class EpgGridGuide(QtWidgets.QWidget):
         root = QtWidgets.QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
         root.setSpacing(8)
-        root.addLayout(top)
+        root.addLayout(top_row)
+        root.addLayout(params_row)
         root.addWidget(self.tbl, 2)
         root.addLayout(details, 1)
 
@@ -434,43 +438,58 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         self.video.setMinimumHeight(240)
         self.video.setAttribute(QtCore.Qt.WA_NativeWindow, True)
 
-        # Contrôles
-        self.btn_prev = QtWidgets.QPushButton("Previous")
-        self.btn_play = QtWidgets.QPushButton("Play")
-        self.btn_pause = QtWidgets.QPushButton("Pause")
-        self.btn_stop = QtWidgets.QPushButton("Stop")
-        self.btn_next = QtWidgets.QPushButton("Next")
-
+        # Contrôles (style Media Player Example)
+        self.btn_prev = QtWidgets.QToolButton()
+        self.btn_prev.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaSkipBackward))
         self.btn_prev.setToolTip("Chaine precedente (playlist)")
+
+        self.play_button = QtWidgets.QToolButton()
+        self.play_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaPlay))
+
+        self.stop_button = QtWidgets.QToolButton()
+        self.stop_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaStop))
+
+        self.btn_next = QtWidgets.QToolButton()
+        self.btn_next.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaSkipForward))
         self.btn_next.setToolTip("Chaine suivante (playlist)")
 
-        self.slider_pos = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider_pos.setRange(0, 1000)  # 0..1000 -> 0..1 pour VLC
+        self.position_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.position_slider.setRange(0, 1000)  # 0..1000 -> 0..1 pour VLC
 
         self.lbl_time = QtWidgets.QLabel("--:-- / --:--")
 
-        self.slider_vol = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider_vol.setRange(0, 100)
-        self.slider_vol.setValue(80)
+        self.mute_button = QtWidgets.QToolButton()
+        self.mute_button.setCheckable(True)
+        self.mute_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaVolume))
 
-        # Layout
-        row = QtWidgets.QHBoxLayout()
-        row.addWidget(self.btn_prev)
-        row.addWidget(self.btn_play)
-        row.addWidget(self.btn_pause)
-        row.addWidget(self.btn_stop)
-        row.addWidget(self.btn_next)
-        row.addSpacing(10)
-        row.addWidget(self.lbl_time)
-        row.addStretch(1)
-        row.addWidget(QtWidgets.QLabel("Vol"))
-        row.addWidget(self.slider_vol)
+        self.volume_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setValue(80)
+        self.volume_slider.setToolTip("Volume VLC (0-100)")
+        self.volume_slider.setMinimumWidth(120)
+
+        self.btn_fullscreen = QtWidgets.QToolButton()
+        self.btn_fullscreen.setText("Plein écran")
+
+        self.controls_widget = QtWidgets.QWidget()
+        self.controls_widget.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        controls = QtWidgets.QHBoxLayout(self.controls_widget)
+        controls.setContentsMargins(0, 0, 0, 0)
+        controls.setSpacing(6)
+        controls.addWidget(self.btn_prev)
+        controls.addWidget(self.play_button)
+        controls.addWidget(self.stop_button)
+        controls.addWidget(self.btn_next)
+        controls.addWidget(self.position_slider, 1)
+        controls.addWidget(self.lbl_time)
+        controls.addWidget(self.mute_button)
+        controls.addWidget(self.volume_slider)
+        controls.addWidget(self.btn_fullscreen)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.video, 1)
-        layout.addWidget(self.slider_pos)
-        layout.addLayout(row)
+        layout.addWidget(self.controls_widget)
 
         # VLC
         args = vlc_args or ["--quiet"]
@@ -479,6 +498,18 @@ class VlcPlayerWidget(QtWidgets.QWidget):
 
         # State
         self._user_scrubbing = False
+        self._fullscreen = False
+        self._fs_window: Optional[QtWidgets.QWidget] = None
+        self._fs_prev_parent: Optional[QtWidgets.QWidget] = None
+        self._fs_prev_video_index: int = -1
+        self._fs_prev_controls_index: int = -1
+        self._controls_hide_timer = QtCore.QTimer(self)
+        self._controls_hide_timer.setSingleShot(True)
+        self._controls_hide_timer.setInterval(5000)
+        self._controls_hide_timer.timeout.connect(self._hide_controls_if_outside)
+        self._cursor_poll_timer = QtCore.QTimer(self)
+        self._cursor_poll_timer.setInterval(200)
+        self._cursor_poll_timer.timeout.connect(self._check_cursor_overlay)
 
         # Timer refresh UI
         self.timer = QtCore.QTimer(self)
@@ -487,23 +518,125 @@ class VlcPlayerWidget(QtWidgets.QWidget):
 
         # Signals
         self.btn_prev.clicked.connect(self.prev_requested.emit)
-        self.btn_play.clicked.connect(self.play)
-        self.btn_pause.clicked.connect(self.pause)
-        self.btn_stop.clicked.connect(self.stop)
+        self.play_button.clicked.connect(self._toggle_play_pause)
+        self.stop_button.clicked.connect(self.stop)
         self.btn_next.clicked.connect(self.next_requested.emit)
+        self.mute_button.toggled.connect(self._toggle_mute)
+        self.volume_slider.valueChanged.connect(self._on_volume)
+        self.position_slider.sliderMoved.connect(self._set_position_from_slider)
+        self.position_slider.sliderPressed.connect(self._scrub_start)
+        self.position_slider.sliderReleased.connect(self._scrub_end)
+        self.btn_fullscreen.clicked.connect(self.toggle_fullscreen)
 
-        self.slider_vol.valueChanged.connect(self._on_volume)
-        self.slider_pos.sliderPressed.connect(self._scrub_start)
-        self.slider_pos.sliderReleased.connect(self._scrub_end)
+        # Raccourcis clavier pour plein écran (F / Esc)
+        for w in (self, self.video):
+            w.setFocusPolicy(QtCore.Qt.StrongFocus)
+            w.installEventFilter(self)
+            w.setMouseTracking(True)
+            w.setAttribute(QtCore.Qt.WA_Hover, True)
+        self.controls_widget.setMouseTracking(True)
+        self.controls_widget.installEventFilter(self)
+        self.controls_widget.setFocusPolicy(QtCore.Qt.NoFocus)
 
         # Embedding après création native
         QtCore.QTimer.singleShot(0, self._init_embedding)
+
+        # Applique le volume initial dès l'init (sinon VLC reste au volume par défaut tant qu'on ne touche pas au slider)
+        self._on_volume(self.volume_slider.value())
 
     def _init_embedding(self):
         # Windows embedding
         self.player.set_hwnd(int(self.video.winId()))
 
     # --- API publique ---
+    def toggle_fullscreen(self):
+        self.set_fullscreen(not self._fullscreen)
+
+    def set_fullscreen(self, enabled: bool):
+        enabled = bool(enabled)
+        if enabled == self._fullscreen:
+            return
+
+        if enabled:
+            # détacher la vidéo dans une fenêtre plein écran dédiée
+            parent_layout = self.layout()
+            if parent_layout:
+                self._fs_prev_video_index = parent_layout.indexOf(self.video)
+                parent_layout.removeWidget(self.video)
+                self._fs_prev_controls_index = parent_layout.indexOf(self.controls_widget)
+                parent_layout.removeWidget(self.controls_widget)
+            self._fs_prev_parent = self.video.parentWidget()
+            self.video.setParent(None)
+            self.controls_widget.setParent(None)
+
+            self._fs_window = QtWidgets.QWidget(None, QtCore.Qt.Window | QtCore.Qt.FramelessWindowHint)
+            self._fs_window.setAttribute(QtCore.Qt.WA_DeleteOnClose, False)
+            self._fs_window.installEventFilter(self)
+            self._fs_window.setMouseTracking(True)
+
+            fs_layout = QtWidgets.QVBoxLayout(self._fs_window)
+            fs_layout.setContentsMargins(0, 0, 0, 0)
+            fs_layout.setSpacing(0)
+            fs_layout.addWidget(self.video, 1)
+            fs_layout.addWidget(self.controls_widget)
+
+            self._fs_window.showFullScreen()
+            self._fs_window.raise_()
+            self._fullscreen = True
+            self.controls_widget.setVisible(False)
+            self._controls_hide_timer.stop()
+            self._controls_hide_timer.start()
+            self.controls_widget.raise_()
+            self._cursor_poll_timer.start()
+            QtCore.QTimer.singleShot(0, self._init_embedding)
+        else:
+            # Replacer la vidéo dans le layout d'origine et fermer la fenêtre FS
+            self._fullscreen = False  # éviter re-entrées
+            fs_window = self._fs_window
+            self._fs_window = None
+            if fs_window:
+                try:
+                    fs_window.removeEventFilter(self)
+                except Exception:
+                    pass
+                try:
+                    layout_fs = fs_window.layout()
+                    if layout_fs:
+                        layout_fs.removeWidget(self.video)
+                except Exception:
+                    pass
+            try:
+                self.video.setParent(self)
+                self.controls_widget.setParent(self)
+            except Exception:
+                pass
+            parent_layout = self.layout()
+            if parent_layout is not None:
+                try:
+                    # Assure une pile verticale: vidéo puis contrôles en bas.
+                    while parent_layout.count():
+                        item = parent_layout.takeAt(0)
+                        w = item.widget()
+                        if w:
+                            w.setParent(None)
+                    parent_layout.addWidget(self.video, 1)
+                    parent_layout.addWidget(self.controls_widget, 0)
+                except Exception:
+                    pass
+            if fs_window:
+                try:
+                    fs_window.hide()
+                    fs_window.close()
+                except Exception:
+                    pass
+            self.controls_widget.setVisible(True)
+            self._controls_hide_timer.stop()
+            self._cursor_poll_timer.stop()
+            self._fs_prev_video_index = -1
+            self._fs_prev_controls_index = -1
+            QtCore.QTimer.singleShot(0, self._init_embedding)
+        self.btn_fullscreen.setText("Quitter plein écran" if self._fullscreen else "Plein écran")
+
     def set_url(self, url: str, vlc_opts: Optional[list[str]] = None):
         media = self.instance.media_new(url)
         for opt in vlc_opts or []:
@@ -522,20 +655,24 @@ class VlcPlayerWidget(QtWidgets.QWidget):
     def play(self):
         self.player.play()
         self.timer.start()
+        self._set_play_icon(True)
 
     def pause(self):
         self.player.pause()
+        self._set_play_icon(False)
 
     def stop(self):
         try:
             self.player.stop()
         finally:
             self.timer.stop()
-            self.slider_pos.setValue(0)
+            self.position_slider.setValue(0)
             self.lbl_time.setText("--:-- / --:--")
+            self._set_play_icon(False)
 
     def shutdown(self):
         """À appeler à la fermeture de l'app."""
+        self.set_fullscreen(False)
         self.stop()
 
     def set_zap_enabled(self, enabled: bool):
@@ -547,14 +684,151 @@ class VlcPlayerWidget(QtWidgets.QWidget):
     def _on_volume(self, v: int):
         self.player.audio_set_volume(v)
 
+    def _toggle_mute(self, muted: bool):
+        self.player.audio_set_mute(bool(muted))
+        icon = QtWidgets.QStyle.SP_MediaVolumeMuted if muted else QtWidgets.QStyle.SP_MediaVolume
+        self.mute_button.setIcon(self.style().standardIcon(icon))
+
     def _scrub_start(self):
         self._user_scrubbing = True
 
     def _scrub_end(self):
-        self.player.set_position(self.slider_pos.value() / 1000.0)
+        self.player.set_position(self.position_slider.value() / 1000.0)
         self._user_scrubbing = False
 
+    def _set_position_from_slider(self, value: int):
+        try:
+            self.player.set_position(value / 1000.0)
+        except Exception:
+            pass
+
+    def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:
+        if event.type() == QtCore.QEvent.KeyPress:
+            key = event.key()
+            if key == QtCore.Qt.Key_F:
+                self.toggle_fullscreen()
+                return True
+            if key == QtCore.Qt.Key_C and self._fullscreen:
+                if self.controls_widget.isVisible():
+                    self._controls_hide_timer.stop()
+                    self.controls_widget.setVisible(False)
+                else:
+                    self._show_controls_overlay(force=True)
+                return True
+            if key == QtCore.Qt.Key_Escape and self._fullscreen:
+                self.set_fullscreen(False)
+                return True
+        if obj is self.video:
+            if event.type() == QtCore.QEvent.MouseButtonPress:
+                self._toggle_play_pause()
+                return True
+            if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.HoverMove) and self._fullscreen:
+                self._maybe_show_controls(obj, event)
+        if self._fs_window and obj is self._fs_window:
+            if event.type() == QtCore.QEvent.KeyPress:
+                key = event.key()
+                if key == QtCore.Qt.Key_Escape:
+                    self.set_fullscreen(False)
+                    return True
+            if event.type() in (QtCore.QEvent.MouseMove, QtCore.QEvent.HoverMove):
+                self._maybe_show_controls(obj, event)
+        return super().eventFilter(obj, event)
+
+    def _toggle_play_pause(self):
+        try:
+            is_playing = bool(self.player.is_playing())
+        except Exception:
+            is_playing = False
+        if is_playing:
+            self.pause()
+        else:
+            self.play()
+
+    def _show_controls_overlay(self, force: bool = False):
+        if not self._fullscreen or not self._fs_window:
+            return
+        self.controls_widget.setVisible(True)
+        self.controls_widget.raise_()
+        if force:
+            self._controls_hide_timer.start()
+
+    def _maybe_show_controls(self, obj: QtCore.QObject, event: QtCore.QEvent):
+        if not self._fullscreen or not self._fs_window:
+            return
+        try:
+            local_pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        except Exception:
+            return
+        try:
+            global_pos = obj.mapToGlobal(local_pos)
+            win_pos = self._fs_window.mapFromGlobal(global_pos)
+        except Exception:
+            return
+        win_h = max(1, self._fs_window.height())
+        threshold = max(80, int(win_h * 0.15))
+        near_bottom = win_pos.y() >= win_h - threshold
+        if near_bottom or self.controls_widget.underMouse():
+            self._show_controls_overlay(force=True)
+        else:
+            # Si on remonte la souris, on lance le timer pour cacher
+            if self.controls_widget.isVisible():
+                self._controls_hide_timer.start()
+
+    def _hide_controls_if_outside(self):
+        if not self._fullscreen or not self._fs_window:
+            return
+        cursor_pos = QtGui.QCursor.pos()
+        try:
+            local_controls = self.controls_widget.mapFromGlobal(cursor_pos)
+            local_win = self._fs_window.mapFromGlobal(cursor_pos)
+        except Exception:
+            self.controls_widget.setVisible(False)
+            return
+        if self.controls_widget.rect().contains(local_controls):
+            self._controls_hide_timer.start()
+            return
+        win_h = max(1, self._fs_window.height())
+        threshold = max(80, int(win_h * 0.15))
+        if local_win.y() >= win_h - threshold:
+            self._controls_hide_timer.start()
+            return
+        self.controls_widget.setVisible(False)
+
+    def _check_cursor_overlay(self):
+        if not self._fullscreen or not self._fs_window:
+            return
+        cursor_pos = QtGui.QCursor.pos()
+        try:
+            local_win = self._fs_window.mapFromGlobal(cursor_pos)
+        except Exception:
+            return
+        win_h = max(1, self._fs_window.height())
+        threshold = max(80, int(win_h * 0.15))
+        near_bottom = local_win.y() >= win_h - threshold
+        if near_bottom:
+            self._show_controls_overlay(force=True)
+
+    def _set_play_icon(self, playing: bool):
+        icon = QtWidgets.QStyle.SP_MediaPause if playing else QtWidgets.QStyle.SP_MediaPlay
+        self.play_button.setIcon(self.style().standardIcon(icon))
+
     def _refresh_ui(self):
+        try:
+            is_playing = bool(self.player.is_playing())
+            self._set_play_icon(is_playing)
+        except Exception:
+            pass
+        try:
+            muted = bool(self.player.audio_get_mute())
+            if self.mute_button.isChecked() != muted:
+                self.mute_button.blockSignals(True)
+                self.mute_button.setChecked(muted)
+                self.mute_button.blockSignals(False)
+            icon = QtWidgets.QStyle.SP_MediaVolumeMuted if muted else QtWidgets.QStyle.SP_MediaVolume
+            self.mute_button.setIcon(self.style().standardIcon(icon))
+        except Exception:
+            pass
+
         length = self.player.get_length()
         t = self.player.get_time()
 
@@ -574,7 +848,7 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         if not self._user_scrubbing:
             pos = self.player.get_position()
             if pos >= 0:
-                self.slider_pos.setValue(int(pos * 1000))
+                self.position_slider.setValue(int(pos * 1000))
 
 
 # =========================
@@ -668,19 +942,32 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         # -------------------------
         self.player = VlcPlayerWidget(vlc_args=vlc_args)
 
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter.addWidget(self.epg_grid)
-        splitter.addWidget(self.player)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([740, 900])
+        self._splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self._splitter.addWidget(self.epg_grid)
+        self._splitter.addWidget(self.player)
+        self._splitter.setStretchFactor(0, 0)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.setSizes([740, 900])
+        self._last_split_sizes = [740, 900]
+
+        # Toggle EPG (masquer/afficher la colonne gauche)
+        self.btn_toggle_epg = QtWidgets.QPushButton("Masquer EPG")
+        self.btn_toggle_epg.setCheckable(True)
+        self.btn_toggle_epg.setChecked(True)
+        self.btn_toggle_epg.clicked.connect(self._on_toggle_epg)
+
+        top_controls = QtWidgets.QHBoxLayout()
+        top_controls.addWidget(self.btn_toggle_epg, 0, QtCore.Qt.AlignLeft)
+        top_controls.addStretch(1)
 
         root = QtWidgets.QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(splitter, 1)
+        root.addLayout(top_controls)
+        root.addWidget(self._splitter, 1)
 
         # State guide
         self._guide_rows: list[dict] = []
+        self._epg_visible = True
 
         # Signals
         self.epg_grid.channel_selected.connect(self._on_channel_selected_from_grid)
@@ -765,6 +1052,10 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         self.player.play_url(url, vlc_opts=vlc_opts)
 
     def shutdown(self):
+        try:
+            self.player.set_fullscreen(False)
+        except Exception:
+            pass
         self.player.shutdown()
 
     # -------------------------
@@ -786,6 +1077,26 @@ class VlcPlayerPanel(QtWidgets.QWidget):
 
     def _on_channel_activated_from_grid(self, _idx: int):
         self._play_current_channel()
+
+    def _on_toggle_epg(self, checked: bool):
+        show = bool(checked)
+        self._epg_visible = show
+        self.epg_grid.setVisible(show)
+        if show:
+            self.btn_toggle_epg.setText("Masquer EPG")
+            if self._last_split_sizes:
+                try:
+                    self._splitter.setSizes(self._last_split_sizes)
+                except Exception:
+                    pass
+        else:
+            self.btn_toggle_epg.setText("Afficher EPG")
+            try:
+                self._last_split_sizes = self._splitter.sizes()
+            except Exception:
+                self._last_split_sizes = [740, 900]
+            self._splitter.setSizes([0, 1])
+
     @QtCore.Slot()
     def zap_next(self):
         self._zap(+1)
