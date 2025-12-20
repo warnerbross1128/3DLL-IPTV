@@ -10,6 +10,7 @@ from core.models import Channel
 class ProbeWorker(QtCore.QObject):
     """Runs URL probes in a separate QThread, reporting status per channel row."""
     progress = QtCore.Signal(int, str)  # row, status
+    progress_count = QtCore.Signal(int, int)  # done, total
     finished = QtCore.Signal()
 
     def __init__(self, channels: list[Channel], timeout_s: float = 8.0):
@@ -75,6 +76,9 @@ class ProbeWorker(QtCore.QObject):
     @QtCore.Slot()
     def run(self):
         """Boucle principale déclenchée dans un QThread parent."""
+        total = len(self.channels)
+        done = 0
+
         try:
             for idx, ch in enumerate(self.channels):
                 if self._stop:
@@ -87,6 +91,8 @@ class ProbeWorker(QtCore.QObject):
 
                 status = self._hard_probe(url)
                 self.progress.emit(idx, status)
+                done += 1
+                self.progress_count.emit(done, total)
 
         except Exception as e:
             try:

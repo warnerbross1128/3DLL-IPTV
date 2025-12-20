@@ -1,4 +1,5 @@
 {
-  "theme": "monokai",
-  "style": "Windows"
+  "theme": "dracula",
+  "style": "Windows",
+  "epg_path": "C:/Users/ludov/Desktop/IPTV_MASTER/epg"
 }

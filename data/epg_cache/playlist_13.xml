@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='utf-8'?>
+<tv><channel id="CFHDDT.ca@SD"><display-name>ICI (CFHD-DT) Montréal, QC</display-name><icon src="https://i.imgur.com/x0vLIWr.png" /><url>https://tvtv.us</url></channel>
+<channel id="CBFTDT.ca@SD"><display-name>Ici Radio-Canada Télé</display-name><icon src="https://i.imgur.com/pFCJGj4.png" /><url>https://tvtv.us</url></channel>
+<channel id="CBMTDT.ca@SD"><display-name>CBC Montreal</display-name><icon src="https://i.imgur.com/OiiM6Mz.png" /><url>https://tvtv.us</url></channel>
+<channel id="CFTMDT.ca@SD"><display-name>TVA</display-name><icon src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/TVA_logo_2020.svg/512px-TVA_logo_2020.svg.png" /><url>https://tvtv.us</url></channel>
+<programme start="20251219003000 +0000" stop="20251219012700 +0000" channel="CBFTDT.ca@SD"><title lang="fr">1991</title></programme>
+<programme start="20251219023000 +0000" stop="20251219030000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les poilus</title></programme>
+<programme start="20251219030000 +0000" stop="20251219040000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Le téléjournal avec Céline Galipeau</title></programme>
+<programme start="20251219040000 +0000" stop="20251219040500 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Sports express</title></programme>
+<programme start="20251219040500 +0000" stop="20251219060000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Ça sent la coupe</title></programme>
+<programme start="20251219060000 +0000" stop="20251219081200 +0000" channel="CBFTDT.ca@SD"><title lang="fr">La belle époque</title></programme>
+<programme start="20251219081200 +0000" stop="20251219110000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Fin des programmes</title></programme>
+<programme start="20251219110000 +0000" stop="20251219114400 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Famille magique</title></programme>
+<programme start="20251219114400 +0000" stop="20251219115600 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Ranger Rob</title></programme>
+<programme start="20251219115600 +0000" stop="20251219120100 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les plus grands secrets de Nicolas Noël</title></programme>
+<programme start="20251219120100 +0000" stop="20251219121300 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Mille Bornes Challenge</title></programme>
+<programme start="20251219121300 +0000" stop="20251219121500 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les cochons d'Angry Birds</title></programme>
+<programme start="20251219121500 +0000" stop="20251219123600 +0000" channel="CBFTDT.ca@SD"><title lang="fr">M. Magoo</title></programme>
+<programme start="20251219123600 +0000" stop="20251219124000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Bernard</title></programme>
+<programme start="20251219124000 +0000" stop="20251219124300 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Angry Birds Toons</title></programme>
+<programme start="20251219124300 +0000" stop="20251219124400 +0000" channel="CBFTDT.ca@SD"><title lang="fr">T'es où Chicky?</title></programme>
+<programme start="20251219124400 +0000" stop="20251219125600 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les Pyjamasques</title></programme>
+<programme start="20251219125600 +0000" stop="20251219125700 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Monsieur Craquepoutte</title></programme>
+<programme start="20251219125700 +0000" stop="20251219125800 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Léon</title></programme>
+<programme start="20251219125800 +0000" stop="20251219132200 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les lutins magnifiques</title></programme>
+<programme start="20251219132200 +0000" stop="20251219132700 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Nicolas Noël: le cristal du temps</title></programme>
+<programme start="20251219132700 +0000" stop="20251219132900 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les bulles d'Angry Birds</title></programme>
+<programme start="20251219132900 +0000" stop="20251219134300 +0000" channel="CBFTDT.ca@SD"><title lang="fr">L'incroyable saga de Selma</title></programme>
+<programme start="20251219134300 +0000" stop="20251219135700 +0000" channel="CBFTDT.ca@SD"><title lang="fr">L'incroyable saga de Selma</title></programme>
+<programme start="20251219135700 +0000" stop="20251219140000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les cochons d'Angry Birds</title></programme>
+<programme start="20251219140000 +0000" stop="20251219160000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Ballerina</title></programme>
+<programme start="20251219160000 +0000" stop="20251219163000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">La cuisine d'Isabelle et Ricardo</title></programme>
+<programme start="20251219163000 +0000" stop="20251219170000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">5 chefs dans ma cuisine</title></programme>
+<programme start="20251219170000 +0000" stop="20251219173000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Le téléjournal midi</title></programme>
+<programme start="20251219173000 +0000" stop="20251219180000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">L'oeil du cyclone</title></programme>
+<programme start="20251219180000 +0000" stop="20251219200000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les visiteurs</title></programme>
+<programme start="20251219200000 +0000" stop="20251219213000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Un Noël (presque) parfait</title></programme>
+<programme start="20251219213000 +0000" stop="20251219220000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Tempête de bonbons dans le Grand Nord</title></programme>
+<programme start="20251219220000 +0000" stop="20251219225900 +0000" channel="CBFTDT.ca@SD"><title lang="fr">La semaine verte</title></programme>
+<programme start="20251219225900 +0000" stop="20251220000000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Le téléjournal</title></programme>
+<programme start="20251220000000 +0000" stop="20251220010000 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Les poilus</title></programme>
+<programme start="20251220010000 +0000" stop="20251220013500 +0000" channel="CBFTDT.ca@SD"><title lang="fr">Nez rouge</title></programme>
+<programme start="20251219010000 +0000" stop="20251219022700 +0000" channel="CBMTDT.ca@SD"><title lang="en">Home Alone</title></programme>
+<programme start="20251219030000 +0000" stop="20251219040000 +0000" channel="CBMTDT.ca@SD"><title lang="en">The National</title></programme>
+<programme start="20251219040000 +0000" stop="20251219043000 +0000" channel="CBMTDT.ca@SD"><title lang="en">CBC Montreal News</title></programme>
+<programme start="20251219043000 +0000" stop="20251219050000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Canadian Reflections</title></programme>
+<programme start="20251219050000 +0000" stop="20251219053000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Coronation Street</title></programme>
+<programme start="20251219053000 +0000" stop="20251219063000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Double the Money</title></programme>
+<programme start="20251219063000 +0000" stop="20251219073000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Dragons' Den</title></programme>
+<programme start="20251219073000 +0000" stop="20251219083000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Dragons' Den</title></programme>
+<programme start="20251219083000 +0000" stop="20251219090000 +0000" channel="CBMTDT.ca@SD"><title lang="en">TallBoyz</title></programme>
+<programme start="20251219090000 +0000" stop="20251219100000 +0000" channel="CBMTDT.ca@SD"><title lang="en">The National</title></programme>
+<programme start="20251219100000 +0000" stop="20251219110000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Escape to the Country</title></programme>
+<programme start="20251219110000 +0000" stop="20251219111000 +0000" channel="CBMTDT.ca@SD"><title lang="en">World Report</title></programme>
+<programme start="20251219111000 +0000" stop="20251219120000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Daybreak</title></programme>
+<programme start="20251219120000 +0000" stop="20251219120500 +0000" channel="CBMTDT.ca@SD"><title lang="en">Mini-Jon and Mini-Maple</title></programme>
+<programme start="20251219120500 +0000" stop="20251219121300 +0000" channel="CBMTDT.ca@SD"><title lang="en">Super Agent Jon Le Bon!</title></programme>
+<programme start="20251219121300 +0000" stop="20251219122600 +0000" channel="CBMTDT.ca@SD"><title lang="en">Kingdom Force</title></programme>
+<programme start="20251219122600 +0000" stop="20251219123000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Super Why's Comic Book Adventures</title></programme>
+<programme start="20251219123000 +0000" stop="20251219124300 +0000" channel="CBMTDT.ca@SD"><title lang="en">Dino Ranch</title></programme>
+<programme start="20251219124300 +0000" stop="20251219125700 +0000" channel="CBMTDT.ca@SD"><title lang="en">PAW Patrol</title></programme>
+<programme start="20251219125700 +0000" stop="20251219130800 +0000" channel="CBMTDT.ca@SD"><title lang="en">Hello Kitty: Super Style!</title></programme>
+<programme start="20251219130800 +0000" stop="20251219131300 +0000" channel="CBMTDT.ca@SD"><title lang="en">Jeremy and Jazzy</title></programme>
+<programme start="20251219131300 +0000" stop="20251219132500 +0000" channel="CBMTDT.ca@SD"><title lang="en">Big Blue</title></programme>
+<programme start="20251219132500 +0000" stop="20251219133700 +0000" channel="CBMTDT.ca@SD"><title lang="en">Rusty Rivets</title></programme>
+<programme start="20251219133700 +0000" stop="20251219134500 +0000" channel="CBMTDT.ca@SD"><title lang="en">Super Agent Jon Le Bon!</title></programme>
+<programme start="20251219134500 +0000" stop="20251219134800 +0000" channel="CBMTDT.ca@SD"><title lang="en">Mini-Jon and Mini-Maple</title></programme>
+<programme start="20251219134800 +0000" stop="20251219140000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Let's Go, Bananas!</title></programme>
+<programme start="20251219140000 +0000" stop="20251219141200 +0000" channel="CBMTDT.ca@SD"><title lang="en">Dylan's Playtime Adventures</title></programme>
+<programme start="20251219141200 +0000" stop="20251219142400 +0000" channel="CBMTDT.ca@SD"><title lang="en">Hop</title></programme>
+<programme start="20251219142400 +0000" stop="20251219143400 +0000" channel="CBMTDT.ca@SD"><title lang="en">It's Andrew!</title></programme>
+<programme start="20251219143400 +0000" stop="20251219143900 +0000" channel="CBMTDT.ca@SD"><title lang="en">Go Togo</title></programme>
+<programme start="20251219143900 +0000" stop="20251219145200 +0000" channel="CBMTDT.ca@SD"><title lang="en">Mighty Express</title></programme>
+<programme start="20251219145200 +0000" stop="20251219145600 +0000" channel="CBMTDT.ca@SD"><title lang="en">Mighty Express</title></programme>
+<programme start="20251219145600 +0000" stop="20251219145800 +0000" channel="CBMTDT.ca@SD"><title lang="en">Playing With Stu</title></programme>
+<programme start="20251219145800 +0000" stop="20251219150500 +0000" channel="CBMTDT.ca@SD"><title lang="en">Mittens &amp; Pants</title></programme>
+<programme start="20251219150500 +0000" stop="20251219151700 +0000" channel="CBMTDT.ca@SD"><title lang="en">The Adventures of Paddington</title></programme>
+<programme start="20251219151700 +0000" stop="20251219153000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Gary's Magic Fort</title></programme>
+<programme start="20251219153000 +0000" stop="20251219154400 +0000" channel="CBMTDT.ca@SD"><title lang="en">Molly of Denali</title></programme>
+<programme start="20251219154400 +0000" stop="20251219154800 +0000" channel="CBMTDT.ca@SD"><title lang="en">Jeremy and Jazzy</title></programme>
+<programme start="20251219154800 +0000" stop="20251219160000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Addison</title></programme>
+<programme start="20251219160000 +0000" stop="20251219170000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Heartland</title></programme>
+<programme start="20251219170000 +0000" stop="20251219180000 +0000" channel="CBMTDT.ca@SD"><title lang="en">CBC Newsroom</title></programme>
+<programme start="20251219180000 +0000" stop="20251219190000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Escape to the Country</title></programme>
+<programme start="20251219190000 +0000" stop="20251219210000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Love, Lights, Hanukkah!</title></programme>
+<programme start="20251219210000 +0000" stop="20251219220000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Jamie's One-Pan Christmas</title></programme>
+<programme start="20251219220000 +0000" stop="20251219230000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Jamie's One-Pan Christmas</title></programme>
+<programme start="20251219230000 +0000" stop="20251219233000 +0000" channel="CBMTDT.ca@SD"><title lang="en">CBC Montreal News</title></programme>
+<programme start="20251219233000 +0000" stop="20251220000000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Kim's Convenience</title></programme>
+<programme start="20251220000000 +0000" stop="20251220003000 +0000" channel="CBMTDT.ca@SD"><title lang="en">Frosty the Snowman</title></programme>
+<programme start="20251220003000 +0000" stop="20251220013500 +0000" channel="CBMTDT.ca@SD"><title lang="en">Home Alone 2: Lost in New York</title></programme>
+<programme start="20251219010000 +0000" stop="20251219012700 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219020000 +0000" stop="20251219023000 +0000" channel="CFHDDT.ca@SD"><title lang="en">World's Most Unexplained</title></programme>
+<programme start="20251219023000 +0000" stop="20251219030000 +0000" channel="CFHDDT.ca@SD"><title lang="en">World's Most Unexplained</title></programme>
+<programme start="20251219030000 +0000" stop="20251219040000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries Decoded</title></programme>
+<programme start="20251219040000 +0000" stop="20251219050000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219050000 +0000" stop="20251219060000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Alien Files Reopened</title></programme>
+<programme start="20251219060000 +0000" stop="20251219070000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries Decoded</title></programme>
+<programme start="20251219070000 +0000" stop="20251219080000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219080000 +0000" stop="20251219090000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries From Above</title></programme>
+<programme start="20251219090000 +0000" stop="20251219100000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Paranormal Caught on Camera</title></programme>
+<programme start="20251219100000 +0000" stop="20251219110000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219110000 +0000" stop="20251219120000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Haunted Case Files</title></programme>
+<programme start="20251219120000 +0000" stop="20251219130000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Destination Haunted</title></programme>
+<programme start="20251219130000 +0000" stop="20251219133000 +0000" channel="CFHDDT.ca@SD"><title lang="en">City Guides</title></programme>
+<programme start="20251219133000 +0000" stop="20251219140000 +0000" channel="CFHDDT.ca@SD"><title lang="en">City Guides</title></programme>
+<programme start="20251219140000 +0000" stop="20251219150000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Encounter: UFO</title></programme>
+<programme start="20251219150000 +0000" stop="20251219160000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Eli Roth Presents: A Ghost Ruined My Life</title></programme>
+<programme start="20251219160000 +0000" stop="20251219170000 +0000" channel="CFHDDT.ca@SD"><title lang="en">My Paranormal Nightmare</title></programme>
+<programme start="20251219170000 +0000" stop="20251219180000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries From Above</title></programme>
+<programme start="20251219180000 +0000" stop="20251219190000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Paranormal Caught on Camera</title></programme>
+<programme start="20251219190000 +0000" stop="20251219200000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Murder by Medic</title></programme>
+<programme start="20251219200000 +0000" stop="20251219210000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219210000 +0000" stop="20251219220000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Intervention Canada</title></programme>
+<programme start="20251219220000 +0000" stop="20251219230000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries Decoded</title></programme>
+<programme start="20251219230000 +0000" stop="20251220000000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Paranormal Caught on Camera</title></programme>
+<programme start="20251220000000 +0000" stop="20251220010000 +0000" channel="CFHDDT.ca@SD"><title lang="en">Mysteries From Above</title></programme>
+<programme start="20251220010000 +0000" stop="20251220013500 +0000" channel="CFHDDT.ca@SD"><title lang="en">My Haunted Hometown</title></programme>
+<programme start="20251218235900 +0000" stop="20251219002600 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Le sapin a des boules</title></programme>
+<programme start="20251219020000 +0000" stop="20251219030000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Star Ac en cadeau</title></programme>
+<programme start="20251219030000 +0000" stop="20251219033500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">TVA nouvelles</title></programme>
+<programme start="20251219033500 +0000" stop="20251219040500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">À vos affaires</title></programme>
+<programme start="20251219040500 +0000" stop="20251219060700 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Comment ça va, Bob?</title></programme>
+<programme start="20251219060700 +0000" stop="20251219074400 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Un Noël rock'n'roll</title></programme>
+<programme start="20251219074400 +0000" stop="20251219084400 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Alertes</title></programme>
+<programme start="20251219084400 +0000" stop="20251219091400 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Infopublicité</title></programme>
+<programme start="20251219091400 +0000" stop="20251219100000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">TVA nouvelles</title></programme>
+<programme start="20251219100000 +0000" stop="20251219101500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">La victoire de l'amour</title></programme>
+<programme start="20251219101500 +0000" stop="20251219103000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">La victoire de l'amour</title></programme>
+<programme start="20251219103000 +0000" stop="20251219110000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Infopublicité</title></programme>
+<programme start="20251219110000 +0000" stop="20251219113000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Le Québec matin</title></programme>
+<programme start="20251219113000 +0000" stop="20251219152900 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Salut bonjour</title></programme>
+<programme start="20251219152900 +0000" stop="20251219155900 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Le tricheur</title></programme>
+<programme start="20251219155900 +0000" stop="20251219165700 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Mario Dumont</title></programme>
+<programme start="20251219165700 +0000" stop="20251219180000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">TVA nouvelles</title></programme>
+<programme start="20251219180000 +0000" stop="20251219194500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">La course au jouet</title></programme>
+<programme start="20251219194500 +0000" stop="20251219200000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Infopublicité</title></programme>
+<programme start="20251219200000 +0000" stop="20251219201500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Infopublicité</title></programme>
+<programme start="20251219201500 +0000" stop="20251219203000 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Histoire de succès</title></programme>
+<programme start="20251219203000 +0000" stop="20251219212800 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Les feux de l'amour</title></programme>
+<programme start="20251219212800 +0000" stop="20251219215800 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Top modèles</title></programme>
+<programme start="20251219215800 +0000" stop="20251219225800 +0000" channel="CFTMDT.ca@SD"><title lang="fr">TVA nouvelles</title></programme>
+<programme start="20251219225800 +0000" stop="20251219232900 +0000" channel="CFTMDT.ca@SD"><title lang="fr">TVA nouvelles</title></programme>
+<programme start="20251219232900 +0000" stop="20251219235900 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Le tricheur</title></programme>
+<programme start="20251219235900 +0000" stop="20251220013500 +0000" channel="CFTMDT.ca@SD"><title lang="fr">Le lutin</title></programme>
+</tv>

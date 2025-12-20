@@ -156,7 +156,7 @@ def _bucket_from_api(timeout: int) -> dict:
 
     Important:
     - `languages.json` et `subdivisions.json` contiennent des milliers d'entrees (ISO/administratif).
-      On filtre donc avec `feeds.json` pour ne garder que ce qui est utilise, sinon on produirait
+      On filtree donc avec `feeds.json` pour ne garder que ce qui est utilise, sinon on produirait
       beaucoup d'URLs inexistantes cote iptv-org/iptv.
     """
     buckets = {"Category": [], "Language": [], "Country": [], "Subdivision/City": []}
@@ -202,7 +202,7 @@ def _bucket_from_api(timeout: int) -> dict:
         url = f"{IPTV_PLAYLIST_BASE}/categories/{slug.lower()}.m3u"
         add("Category", name, url)
 
-    # Languages (filtrees par feeds.json)
+    # Languages (filtreees par feeds.json)
     lang_name: dict[str, str] = {}
     if used_languages:
         # languages.json est gros: on ne garde que les codes utilises
@@ -219,7 +219,7 @@ def _bucket_from_api(timeout: int) -> dict:
             url = f"{IPTV_PLAYLIST_BASE}/languages/{code.lower()}.m3u"
             add("Language", label, url)
 
-    # Countries (filtrees par feeds.json)
+    # Countries (filtreees par feeds.json)
     country_name: dict[str, str] = {}
     countries = _get_json(f"{PLAYLISTS_API_BASE}/countries.json", timeout)
     for c in countries:
@@ -233,7 +233,7 @@ def _bucket_from_api(timeout: int) -> dict:
         url = f"{IPTV_PLAYLIST_BASE}/countries/{code.lower()}.m3u"
         add("Country", label, url)
 
-    # Subdivisions (filtrees par feeds.json)
+    # Subdivisions (filtreees par feeds.json)
     if used_subdivisions:
         try:
             for s in _get_json(f"{PLAYLISTS_API_BASE}/subdivisions.json", timeout):
@@ -248,7 +248,7 @@ def _bucket_from_api(timeout: int) -> dict:
         except Exception:
             pass
 
-    # Cities (filtrees par feeds.json, fichier lourd -> optionnel)
+    # Cities (filtreees par feeds.json, fichier lourd -> optionnel)
     if used_cities:
         try:
             for c in _get_json(f"{PLAYLISTS_API_BASE}/cities.json", timeout):
@@ -389,7 +389,7 @@ def fetch_playlists_index(timeout=15) -> dict:
 
 
 # =========================
-# Feeds dialog (advanced listing + multi-criteria filters)
+# Feeds dialog (advanced listing + multi-criteria filtreers)
 # =========================
 
 class FeedsDialog(QtWidgets.QDialog):
@@ -415,15 +415,13 @@ class FeedsDialog(QtWidgets.QDialog):
 
         self.btn_refresh = QtWidgets.QPushButton("Rafraichir (API)")
         self.btn_import = QtWidgets.QPushButton("Importer la selection")
-        self.btn_close = QtWidgets.QPushButton("Fermer")
         self.btn_import.setEnabled(False)
 
         top.addWidget(self.btn_refresh)
         top.addWidget(self.btn_import)
         top.addStretch(1)
-        top.addWidget(self.btn_close)
 
-        # Filters
+        # filtreers
         filt = QtWidgets.QGridLayout()
         layout.addLayout(filt)
 
@@ -477,17 +475,16 @@ class FeedsDialog(QtWidgets.QDialog):
         layout.addWidget(self.tbl, 1)
 
         # Signals
-        self.btn_close.clicked.connect(self.close)
         self.btn_refresh.clicked.connect(self.refresh)
         self.btn_import.clicked.connect(self._import_selected)
         self.tbl.itemSelectionChanged.connect(self._sel_changed)
 
-        self.txt_q.textChanged.connect(self.apply_filters)
-        self.cmb_country.currentIndexChanged.connect(self.apply_filters)
-        self.cmb_lang.currentIndexChanged.connect(self.apply_filters)
-        self.cmb_tz.currentIndexChanged.connect(self.apply_filters)
-        self.cmb_format.currentIndexChanged.connect(self.apply_filters)
-        self.chk_main.stateChanged.connect(self.apply_filters)
+        self.txt_q.textChanged.connect(self.apply_filtreers)
+        self.cmb_country.currentIndexChanged.connect(self.apply_filtreers)
+        self.cmb_lang.currentIndexChanged.connect(self.apply_filtreers)
+        self.cmb_tz.currentIndexChanged.connect(self.apply_filtreers)
+        self.cmb_format.currentIndexChanged.connect(self.apply_filtreers)
+        self.chk_main.stateChanged.connect(self.apply_filtreers)
 
         self.feeds_loaded.connect(self._on_loaded)
         self.feeds_error.connect(self._on_error)
@@ -501,7 +498,7 @@ class FeedsDialog(QtWidgets.QDialog):
         if total <= shown:
             self.lbl_info.setText(f"Resultats: {shown}")
         else:
-            self.lbl_info.setText(f"Resultats: {shown} / {total} (limite {self._max_rows} - ajuste les filtres)")
+            self.lbl_info.setText(f"Resultats: {shown} / {total} (limite {self._max_rows} - ajuste les filtrees)")
 
     def refresh(self):
         self.btn_refresh.setEnabled(False)
@@ -529,16 +526,17 @@ class FeedsDialog(QtWidgets.QDialog):
         threading.Thread(target=run, daemon=True).start()
 
 
-class StreamsDialog(QtWidgets.QDialog):
+class StreamsDialog(QtWidgets.QWidget):
     streams_loaded = QtCore.Signal(list, dict)  # streams, meta
     streams_error = QtCore.Signal(str)
 
-    def __init__(self, parent: QtWidgets.QWidget, *, log):
+    def __init__(self, parent: QtWidgets.QWidget, *, log, import_mode: str = "replace"):
         super().__init__(parent)
         self._log = log or (lambda _s: None)
-
-        self.setWindowTitle("Streams (API iptv-org)")
-        self.resize(1200, 760)
+        self._import_mode = (import_mode or "replace").strip().lower()
+        # Garde une référence explicite sur la MainWindow pour l'import/merge,
+        # car l'ajout dans un QTabWidget peut changer le parent Qt.
+        self._main_window = parent
 
         self._streams_all: list[dict] = []
         self._visible_rows: list[int] = []
@@ -553,15 +551,13 @@ class StreamsDialog(QtWidgets.QDialog):
 
         self.btn_refresh = QtWidgets.QPushButton("Rafraichir (API)")
         self.btn_import = QtWidgets.QPushButton("Importer la selection")
-        self.btn_close = QtWidgets.QPushButton("Fermer")
         self.btn_import.setEnabled(False)
 
         top.addWidget(self.btn_refresh)
         top.addWidget(self.btn_import)
         top.addStretch(1)
-        top.addWidget(self.btn_close)
 
-        # Filters
+        # filtreers
         filt = QtWidgets.QGridLayout()
         layout.addLayout(filt)
 
@@ -616,32 +612,41 @@ class StreamsDialog(QtWidgets.QDialog):
         layout.addWidget(self.tbl, 1)
 
         # Signals
-        self.btn_close.clicked.connect(self.close)
         self.btn_refresh.clicked.connect(self.refresh)
         self.btn_import.clicked.connect(self._import_selected)
         self.tbl.itemSelectionChanged.connect(self._sel_changed)
 
-        self.txt_q.textChanged.connect(self.apply_filters)
-        self.cmb_country.currentIndexChanged.connect(self.apply_filters)
-        self.cmb_lang.currentIndexChanged.connect(self.apply_filters)
-        self.cmb_quality.currentIndexChanged.connect(self.apply_filters)
-        self.chk_https.stateChanged.connect(self.apply_filters)
-        self.chk_ref.stateChanged.connect(self.apply_filters)
-        self.chk_ua.stateChanged.connect(self.apply_filters)
+        self.txt_q.textChanged.connect(self.apply_filtreers)
+        self.cmb_country.currentIndexChanged.connect(self.apply_filtreers)
+        self.cmb_lang.currentIndexChanged.connect(self.apply_filtreers)
+        self.cmb_quality.currentIndexChanged.connect(self.apply_filtreers)
+        self.chk_https.stateChanged.connect(self.apply_filtreers)
+        self.chk_ref.stateChanged.connect(self.apply_filtreers)
+        self.chk_ua.stateChanged.connect(self.apply_filtreers)
 
         self.streams_loaded.connect(self._on_loaded)
         self.streams_error.connect(self._on_error)
 
-        self.refresh()
-
     def _sel_changed(self):
         self.btn_import.setEnabled(len(self.tbl.selectionModel().selectedRows()) > 0)
+
+    def set_import_mode(self, mode: str):
+        mode = (mode or "replace").strip().lower()
+        self._import_mode = "merge" if mode == "merge" else "replace"
+        if self._import_mode == "merge":
+            self.btn_import.setText("Fusionner la selection")
+        else:
+            self.btn_import.setText("Importer la selection")
+
+    def ensure_loaded(self):
+        if not self._streams_all and self.btn_refresh.isEnabled():
+            self.refresh()
 
     def _set_info(self, total: int, shown: int):
         if total <= shown:
             self.lbl_info.setText(f"Resultats: {shown}")
         else:
-            self.lbl_info.setText(f"Resultats: {shown} / {total} (limite {self._max_rows} - ajuste les filtres)")
+            self.lbl_info.setText(f"Resultats: {shown} / {total} (limite {self._max_rows} - ajuste les filtrees)")
 
     def refresh(self):
         self.btn_refresh.setEnabled(False)
@@ -748,7 +753,7 @@ class StreamsDialog(QtWidgets.QDialog):
         qual_vals = [(q, q) for q in sorted(qualities)]
         refill(self.cmb_quality, "Toutes qualites", qual_vals)
 
-        self.apply_filters()
+        self.apply_filtreers()
         self._log(f"Streams: chargement OK ({len(self._streams_all)}).")
 
     def _stream_countries_langs(self, s: dict) -> tuple[list[str], list[str]]:
@@ -760,7 +765,7 @@ class StreamsDialog(QtWidgets.QDialog):
             return [], []
         return list(meta.get("countries") or []), list(meta.get("languages") or [])
 
-    def apply_filters(self):
+    def apply_filtreers(self):
         q = (self.txt_q.text() or "").strip().lower()
         wanted_country = self.cmb_country.currentData() or ""
         wanted_lang = self.cmb_lang.currentData() or ""
@@ -910,8 +915,19 @@ class StreamsDialog(QtWidgets.QDialog):
         m3u = "\n".join(out) + "\n"
         label = f"API streams ({len(selected)} selection)"
 
-        parent = self.parent()
-        import_emit = getattr(parent, "import_merged", None)
+        main = self._main_window or self.parent() or self.window()
+        if self._import_mode == "merge":
+            merge_fn = getattr(main, "_merge_channels", None)
+            if merge_fn is not None:
+                try:
+                    merge_fn(parse_m3u(m3u), label)
+                    self._log(f"Streams: fusion OK -> {len(selected)} streams.")
+                except Exception as e:
+                    self._log(f"Streams: fusion KO: {e}")
+                return
+            # Fallback to import if merge unavailable
+
+        import_emit = getattr(main, "import_merged", None)
         if import_emit is not None:
             import_emit.emit(m3u, label)
         self._log(f"Streams: import OK -> {len(selected)} streams.")
@@ -930,7 +946,7 @@ class StreamsDialog(QtWidgets.QDialog):
         country_name = meta.get("country_name") or {}
         lang_name = meta.get("lang_name") or {}
 
-        # Populate filter combos from feeds content (only used values)
+        # Populate filtreer combos from feeds content (only used values)
         countries_used: set[str] = set()
         langs_used: set[str] = set()
         tz_used: set[str] = set()
@@ -976,7 +992,7 @@ class StreamsDialog(QtWidgets.QDialog):
         fmt_vals = [(f, f) for f in sorted(fmt_used)]
         refill(self.cmb_format, "Tous formats", fmt_vals)
 
-        self._feeds_apply_filters()
+        self._feeds_apply_filtreers()
         self._log(f"Feeds: chargement OK ({len(self._feeds_all)}).")
 
     def _feeds_country_pass(self, f: dict, wanted_code: str) -> bool:
@@ -1004,7 +1020,7 @@ class StreamsDialog(QtWidgets.QDialog):
             return True
         return (f.get("format") or "").strip() == wanted_fmt
 
-    def _feeds_apply_filters(self):
+    def _feeds_apply_filtreers(self):
         q = (self.txt_q.text() or "").strip().lower()
         country = self.cmb_country.currentData() or ""
         lang = self.cmb_lang.currentData() or ""
@@ -1141,7 +1157,7 @@ class StreamsDialog(QtWidgets.QDialog):
             finally:
                 QtCore.QTimer.singleShot(0, self, lambda: self.btn_refresh.setEnabled(True))
                 QtCore.QTimer.singleShot(0, self, lambda: self.btn_import.setEnabled(True))
-                QtCore.QTimer.singleShot(0, self, lambda: self._feeds_apply_filters())
+                QtCore.QTimer.singleShot(0, self, lambda: self._feeds_apply_filtreers())
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -1254,6 +1270,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     epg_ok = QtCore.Signal()
     epg_fail = QtCore.Signal(str)
+    epg_progress = QtCore.Signal(str)
 
     log_sig = QtCore.Signal(int, str)
 
@@ -1265,13 +1282,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.config_path = Path("data/config.json")
         self._current_style = "Fusion"
         self._current_theme = "light"
+        self._current_epg_path = ""
 
         self.channels: list[Channel] = []
         self._probe_thread: QtCore.QThread | None = None
         self._probe_worker: ProbeWorker | None = None
+        self._probe_total: int = 0
+        self._probe_done: int = 0
         self._editing_playlist_id: int | None = None
         self._editing_playlist_name: str | None = None
         self._last_import_source: str = "-"  # rappel de provenance pour l'export Salon
+        self._last_epg_xml: bytes | None = None
+        self._last_epg_coverage: str = ""
+        self._epg_cache_dir = Path("data/epg_cache")
+        self._epg_cache_ttl_hours = 12
 
         # DB
         self.db = Storage("data/iptv.db")
@@ -1281,7 +1305,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(central)
         layout = QtWidgets.QVBoxLayout(central)
 
-        # Splitter vertical: Tabs (haut) + Log (bas)
+        # Splitter vertical: onglets en haut, log global en bas
         self.vsplit = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         layout.addWidget(self.vsplit, 1)
 
@@ -1327,33 +1351,64 @@ class MainWindow(QtWidgets.QMainWindow):
         actions = QtWidgets.QHBoxLayout()
         vc.addLayout(actions)
 
-        self.btn_load = QtWidgets.QPushButton("Importer M3U (fichier)…")
-        self.btn_load_url = QtWidgets.QPushButton("Importer M3U (URL)…")
+        # Menus: Importer / Fusionner / Supprimer / Exporter
+        self.btn_import = QtWidgets.QToolButton()
+        self.btn_import.setText("Importer")
+        self.btn_import.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self._import_menu = QtWidgets.QMenu(self.btn_import)
+        self.act_import_file = self._import_menu.addAction("Importer M3U (fichier)")
+        self.act_import_url = self._import_menu.addAction("Importer M3U (URL)")
+        self.btn_import.setMenu(self._import_menu)
+
+        self.btn_merge = QtWidgets.QToolButton()
+        self.btn_merge.setText("Fusionner")
+        self.btn_merge.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self._merge_menu = QtWidgets.QMenu(self.btn_merge)
+        self.act_merge_file = self._merge_menu.addAction("Fusionner M3U depuis fichier")
+        self.act_merge_url = self._merge_menu.addAction("Fusionner M3U depuis URL")
+        self.act_merge_salon = self._merge_menu.addAction("Fusionner playlist du Salon")
+        self.act_merge_txt_links = self._merge_menu.addAction("Fusionner liens (fichier .txt)")
+        self.act_merge_streams_api = self._merge_menu.addAction("Fusionner Streams (API)")
+        self.btn_merge.setMenu(self._merge_menu)
+
+        self.btn_delete_menu = QtWidgets.QToolButton()
+        self.btn_delete_menu.setText("Supprimer")
+        self.btn_delete_menu.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self._delete_menu = QtWidgets.QMenu(self.btn_delete_menu)
+        self.act_del_dead = self._delete_menu.addAction("Supprimer KO")
+        self.act_del_sel = self._delete_menu.addAction("Supprimer selection")
+        self.btn_delete_menu.setMenu(self._delete_menu)
+
+        self.btn_export_menu = QtWidgets.QToolButton()
         self.btn_test = QtWidgets.QPushButton("Tester URLs")
         self.btn_stop = QtWidgets.QPushButton("Stop")
-        self.btn_export = QtWidgets.QPushButton("Exporter filtré…")
-        self.btn_export_salon = QtWidgets.QPushButton("Exporter au Salon")
-        self.btn_del_dead = QtWidgets.QPushButton("Supprimer KO")
-        self.btn_del_sel = QtWidgets.QPushButton("Supprimer sélection")
-
+        self.btn_send_player = QtWidgets.QPushButton("Charger dans le lecteur")
         self.btn_stop.setEnabled(False)
+        self.lbl_probe_status = QtWidgets.QLabel("")
 
-        actions.addWidget(self.btn_load)
-        actions.addWidget(self.btn_load_url)
+        self.btn_export_menu.setText("Exporter")
+        self.btn_export_menu.setPopupMode(QtWidgets.QToolButton.InstantPopup)
+        self._export_menu = QtWidgets.QMenu(self.btn_export_menu)
+        self.act_export_filtered = self._export_menu.addAction("Exporter playlist filtree")
+        self.act_export_salon = self._export_menu.addAction("Exporter au Salon")
+        self.btn_export_menu.setMenu(self._export_menu)
+        actions.addWidget(self.btn_import)
+        actions.addWidget(self.btn_merge)
         actions.addWidget(self.btn_test)
         actions.addWidget(self.btn_stop)
+        actions.addWidget(self.btn_send_player)
         actions.addSpacing(12)
-        actions.addWidget(self.btn_del_dead)
-        actions.addWidget(self.btn_del_sel)
-        actions.addWidget(self.btn_export)
-        actions.addWidget(self.btn_export_salon)
+        actions.addWidget(self.btn_delete_menu)
+        actions.addWidget(self.btn_export_menu)
         actions.addStretch(1)
+        actions.addWidget(self.lbl_probe_status)
 
-        # Filtre
+
+        # filtree
         filt = QtWidgets.QHBoxLayout()
         vc.addLayout(filt)
         self.search = QtWidgets.QLineEdit()
-        self.search.setPlaceholderText("Filtre chaînes (nom, groupe, tvg-id, url)…")
+        self.search.setPlaceholderText("filtree chaînes (nom, groupe, tvg-id, url)…")
         filt.addWidget(self.search)
 
         # Table chaînes
@@ -1365,13 +1420,13 @@ class MainWindow(QtWidgets.QMainWindow):
         vc.addWidget(self.table, 1)
 
         # ---- EPG UI
-        epg_box = QtWidgets.QGroupBox("EPG (XMLTV)")
-        epg_layout = QtWidgets.QVBoxLayout(epg_box)
+        self.epg_box = QtWidgets.QGroupBox("EPG (XMLTV)")
+        epg_layout = QtWidgets.QVBoxLayout(self.epg_box)
 
         epg_top = QtWidgets.QHBoxLayout()
         epg_layout.addLayout(epg_top)
 
-        self.epg_url = QtWidgets.QLineEdit(r"C:\Users\ludov\Desktop\IPTV_MASTER\epg")
+        self.epg_url = QtWidgets.QLineEdit("")
         self.epg_url.setPlaceholderText("URL EPG (ex: http://localhost:3000/guide.xml ou .xml.gz)")
         self.btn_epg_update = QtWidgets.QPushButton("Mettre à jour EPG")
 
@@ -1382,15 +1437,28 @@ class MainWindow(QtWidgets.QMainWindow):
         epg_top.addWidget(self.btn_epg_update)
         epg_top.addWidget(self.btn_epg_guide)
 
-        self.lbl_now = QtWidgets.QLabel("Maintenant: —")
-        self.lbl_next = QtWidgets.QLabel("Ensuite: —")
+        epg_opts = QtWidgets.QHBoxLayout()
+        epg_layout.addLayout(epg_opts)
+        self.chk_epg_auto = QtWidgets.QCheckBox("Auto EPG pour playlists Salon (cache 12h)")
+        self.chk_epg_auto.setChecked(True)
+        self.btn_epg_export = QtWidgets.QPushButton("Exporter EPG (snapshot)")
+        epg_opts.addWidget(self.chk_epg_auto)
+        epg_opts.addStretch(1)
+        epg_opts.addWidget(self.btn_epg_export)
+
+        self.lbl_epg_status = QtWidgets.QLabel("")
+        self.lbl_epg_status.setWordWrap(True)
+
+        self.lbl_now = QtWidgets.QLabel("Maintenant: -")
+        self.lbl_next = QtWidgets.QLabel("Ensuite: -")
         self.lbl_now.setWordWrap(True)
         self.lbl_next.setWordWrap(True)
 
+        epg_layout.addWidget(self.lbl_epg_status)
         epg_layout.addWidget(self.lbl_now)
         epg_layout.addWidget(self.lbl_next)
+        vc.addWidget(self.epg_box)
 
-        vc.addWidget(epg_box, 0)
         self.tabs.addTab(tab_channels, "Chaînes")
 
         # ---- Tab 3: VLC Player (création paresseuse)
@@ -1414,8 +1482,12 @@ class MainWindow(QtWidgets.QMainWindow):
         cfg = self._load_user_config()
         initial_theme = cfg.get("theme") if cfg.get("theme") in self._available_themes else (self._available_themes[0] if self._available_themes else "light")
         initial_style = cfg.get("style") if cfg.get("style") else "Fusion"
+        initial_epg_path = cfg.get("epg_path") or ""
         self._current_theme = initial_theme
         self._current_style = initial_style
+        self._current_epg_path = initial_epg_path
+        if initial_epg_path and hasattr(self, "epg_url"):
+            self.epg_url.setText(initial_epg_path)
         styles = [s for s in QtWidgets.QStyleFactory.keys() if s.lower() != "windowsvista"]
         if not styles:
             styles = ["Fusion", "Windows"]
@@ -1426,23 +1498,46 @@ class MainWindow(QtWidgets.QMainWindow):
             initial_theme=initial_theme,
             styles=styles,
             initial_style=initial_style,
+            initial_epg_path=initial_epg_path,
         )
-        self.settings_tab.theme_changed.connect(self.on_theme_changed)
-        self.settings_tab.style_changed.connect(self.on_style_changed)
+        self.settings_tab.config_preview.connect(self.on_config_preview)
+        self.settings_tab.config_changed.connect(self.on_config_changed)
         self.tabs.addTab(self.settings_tab, "Configuration")
+
+        # ---- Tab 6: Info (remerciements + liens utiles)
+        info_tab = QtWidgets.QWidget()
+        info_layout = QtWidgets.QVBoxLayout(info_tab)
+
+        info_text = QtWidgets.QTextBrowser()
+        info_text.setOpenExternalLinks(True)
+        info_text.setHtml(
+            """
+            <h3>Liens GitHub</h3>
+            <ul>
+              <li><a href="https://github.com/iptv-org/iptv">iptv-org/iptv</a></li>
+              <li><a href="https://github.com/iptv-org/api">iptv-org/api</a></li>
+              <li><a href="https://github.com/iptv-org/epg">iptv-org/epg</a></li>
+            </ul>
+            <p>Un grand merci aux créateurs et mainteneurs d'<a href="https://github.com/iptv-org">iptv-org</a> pour leur travail communautaire sur les playlists et l'API.</p>
+            """
+        )
+        info_layout.addWidget(info_text)
+        info_layout.addStretch(1)
+        self.tabs.addTab(info_tab, "Info")
+
+        # ---- Tab 7: Streams API (widget intégré)
+        self.streams_widget = StreamsDialog(self, log=self.logln, import_mode="replace")
+        self.streams_tab_index = self.tabs.addTab(self.streams_widget, "Streams (API)")
         # Appliquer la config dès le démarrage
-        self.on_style_changed(initial_style)
-        self.on_theme_changed(initial_theme)
+        self.on_config_changed({"style": initial_style, "theme": initial_theme, "epg_path": initial_epg_path})
 
         # ✅ Refresh Qt-safe (au démarrage)
         QtCore.QTimer.singleShot(0, self.salon_tab.refresh)
 
-        # -------------------------
-        # Log repliable (dans le splitter)
-        # -------------------------
-        log_wrap = QtWidgets.QWidget()
-        log_v = QtWidgets.QVBoxLayout(log_wrap)
-        log_v.setContentsMargins(0, 0, 0, 0)
+        # ---- Log global (visible pour tous les onglets)
+        self.log_wrap = QtWidgets.QFrame()
+        log_v = QtWidgets.QVBoxLayout(self.log_wrap)
+        log_v.setContentsMargins(4, 0, 4, 0)
         log_v.setSpacing(4)
 
         log_header = QtWidgets.QHBoxLayout()
@@ -1462,40 +1557,37 @@ class MainWindow(QtWidgets.QMainWindow):
         log_header.addWidget(QtWidgets.QLabel("Niveau"))
         log_header.addWidget(self.cmb_log_level)
         log_header.addWidget(self.btn_log_clear)
-        self._log_collapsed_h = (
-            max(
-                self.btn_toggle_log.sizeHint().height(),
-                self.cmb_log_level.sizeHint().height(),
-                self.btn_log_clear.sizeHint().height(),
-            )
-            + 12
-        )
-        log_wrap.setMinimumHeight(self._log_collapsed_h)
 
         self.log = QtWidgets.QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log.setMaximumBlockCount(3000)
         log_v.addWidget(self.log, 1)
 
-        self.vsplit.addWidget(log_wrap)
-
-        self.vsplit.setStretchFactor(0, 1)
-        self.vsplit.setStretchFactor(1, 0)
-        self.vsplit.setSizes([600, 160])
+        self.vsplit.addWidget(self.log_wrap)
+        self.vsplit.setStretchFactor(0, 3)
+        self.vsplit.setStretchFactor(1, 1)
+        self.vsplit.setSizes([700, 260])
+        self._log_last_size = 260
 
         self.btn_toggle_log.clicked.connect(self._toggle_log)
         self.btn_log_clear.clicked.connect(self._clear_logs)
         self.cmb_log_level.currentTextChanged.connect(self._on_log_level_changed)
 
         # Signals
-        self.btn_load.clicked.connect(self.on_load_file)
-        self.btn_load_url.clicked.connect(self.on_load_url)
+        self.act_import_file.triggered.connect(self.on_load_file)
+        self.act_import_url.triggered.connect(self.on_load_url)
         self.btn_test.clicked.connect(self.on_test)
         self.btn_stop.clicked.connect(self.on_stop)
-        self.btn_export.clicked.connect(self.on_export)
-        self.btn_export_salon.clicked.connect(self.on_export_salon)
-        self.btn_del_dead.clicked.connect(self.on_delete_dead)
-        self.btn_del_sel.clicked.connect(self.on_delete_selected)
+        self.btn_send_player.clicked.connect(self.on_send_to_player)
+        self.act_export_filtered.triggered.connect(self.on_export)
+        self.act_export_salon.triggered.connect(self.on_export_salon)
+        self.act_del_dead.triggered.connect(self.on_delete_dead)
+        self.act_del_sel.triggered.connect(self.on_delete_selected)
+        self.act_merge_file.triggered.connect(self.on_merge_file)
+        self.act_merge_url.triggered.connect(self.on_merge_url)
+        self.act_merge_salon.triggered.connect(self.on_merge_salon)
+        self.act_merge_txt_links.triggered.connect(self.on_merge_txt_links)
+        self.act_merge_streams_api.triggered.connect(self.on_merge_streams_api)
 
         # Debounce filters to keep UI responsive on large playlists.
         self._channels_filter_timer = QtCore.QTimer(self)
@@ -1510,11 +1602,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tree.itemSelectionChanged.connect(self.on_tree_selection_changed)
         self.tree.itemClicked.connect(self._tree_click_expand)
 
-        self._tree_filter_timer = QtCore.QTimer(self)
-        self._tree_filter_timer.setSingleShot(True)
-        self._tree_filter_timer.setInterval(150)
-        self._tree_filter_timer.timeout.connect(self.apply_tree_filter)
-        self.list_search.textChanged.connect(lambda *_: self._tree_filter_timer.start())
+        self._tree_filtreer_timer = QtCore.QTimer(self)
+        self._tree_filtreer_timer.setSingleShot(True)
+        self._tree_filtreer_timer.setInterval(150)
+        self._tree_filtreer_timer.timeout.connect(self.apply_tree_filtreer)
+        self.list_search.textChanged.connect(lambda *_: self._tree_filtreer_timer.start())
 
         self.playlists_loaded.connect(self._populate_tree)
         self.playlists_error.connect(self._log_error)
@@ -1525,9 +1617,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table.itemSelectionChanged.connect(self.on_channel_selected)
         self.btn_epg_update.clicked.connect(self.on_epg_update)
         self.btn_epg_guide.clicked.connect(self.on_epg_guide)
+        self.btn_epg_export.clicked.connect(self.on_epg_export)
 
         self.epg_ok.connect(self.on_epg_ok)
         self.epg_fail.connect(self.on_epg_fail)
+        self.epg_progress.connect(self.on_epg_progress)
 
         self._log_buffer: deque[tuple[int, str]] = deque(maxlen=3000)  # (level_num, rendered_line)
         self._log_level_min = 20  # INFO
@@ -1589,13 +1683,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log.clear()
 
     def _toggle_log(self, checked: bool):
-        self.log.setVisible(checked)
+        # On masque uniquement la zone texte, on garde l'entête (bouton) visible pour pouvoir réafficher,
+        # et on ajuste le splitter pour libérer la place quand le log est masqué.
+        try:
+            self.log.setVisible(checked)
+        except Exception:
+            pass
+        try:
+            sizes = self.vsplit.sizes()
+            total = sum(sizes) if sizes else self.vsplit.size().height()
+            if not checked:
+                if len(sizes) > 1 and sizes[1] > 0:
+                    self._log_last_size = sizes[1]
+                collapsed = self.btn_toggle_log.sizeHint().height() + 8
+                top = max(1, total - collapsed)
+                self.vsplit.setSizes([top, collapsed])
+            else:
+                log_size = max(120, getattr(self, "_log_last_size", 260))
+                top = max(1, total - log_size)
+                self.vsplit.setSizes([top, log_size])
+        except Exception:
+            pass
         self.btn_toggle_log.setArrowType(QtCore.Qt.DownArrow if checked else QtCore.Qt.RightArrow)
-
-        if checked:
-            self.vsplit.setSizes([600, 160])
-        else:
-            self.vsplit.setSizes([1, self._log_collapsed_h])
 
     def _on_tab_changed(self, idx: int):
         if idx == 2:  # Lecteur
@@ -1660,14 +1769,55 @@ class MainWindow(QtWidgets.QMainWindow):
         self._current_theme = theme
         self._save_user_config()
 
-    def on_style_changed(self, style_name: str):
-        app = QtWidgets.QApplication.instance()
-        if not app:
+    def _apply_config(self, payload: dict, persist: bool):
+        if not isinstance(payload, dict):
             return
-        if style_name and style_name in QtWidgets.QStyleFactory.keys():
+        app = QtWidgets.QApplication.instance()
+        style_name = (payload.get("style") or "").strip()
+        theme_name = (payload.get("theme") or "").strip()
+        epg_path = (payload.get("epg_path") or "").strip()
+
+        changed_parts = []
+
+        if style_name and app and style_name in QtWidgets.QStyleFactory.keys():
             app.setStyle(style_name)
             self._current_style = style_name
+            changed_parts.append(f"style={style_name}")
+
+        if theme_name:
+            spec = self._theme_specs.get(theme_name) or next(iter(self._theme_specs.values()), None)
+            if spec and app:
+                app.setPalette(spec.palette)
+            self._current_theme = theme_name
+            changed_parts.append(f"theme={theme_name}")
+
+        if epg_path:
+            self._current_epg_path = epg_path
+            try:
+                if hasattr(self, "epg_url"):
+                    self.epg_url.setText(epg_path)
+            except Exception:
+                pass
+            changed_parts.append(f"epg_path={epg_path}")
+        else:
+            self._current_epg_path = ""
+            changed_parts.append("epg_path=<vide>")
+
+        if persist:
             self._save_user_config()
+            if changed_parts:
+                self.logln("Config: enregistrée -> " + ", ".join(changed_parts))
+        else:
+            if changed_parts:
+                self.logln("Config: prévisualisation -> " + ", ".join(changed_parts), level="DEBUG")
+
+    def on_config_preview(self, payload: dict):
+        """Applique sans persister (prévisualisation)."""
+        self._apply_config(payload, persist=False)
+
+    def on_config_changed(self, payload: dict):
+        """Applique et enregistre la configuration."""
+        self._apply_config(payload, persist=True)
 
     # -------- Salon --------
 
@@ -1678,25 +1828,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.logln(f"Salon: erreur DB: {e}")
             return
 
+        rec = None
         try:
             rec = next((p for p in self.db.list_playlists() if int(p.id) == int(playlist_id)), None)
             if rec and getattr(self, "epg_url", None) is not None:
                 self.epg_url.setText(rec.epg_url or "")
         except Exception:
-            pass
+            rec = None
 
-        channels = []
-        for r in rows:
-            channels.append(Channel(
-                extinf=r.get("extinf", ""),
-                url=r.get("url", ""),
-                name=r.get("name", ""),
-                group=r.get("group", ""),
-                tvg_id=r.get("tvg_id", ""),
-                vlc_opts=r.get("vlc_opts", []) or [],
-                status="—",
-            ))
-
+        channels = self._channels_from_db_rows(rows)
         if not channels:
             self.logln("Salon: playlist vide.")
             return
@@ -1709,8 +1849,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.logln(f"Salon: erreur player: {e}")
             return
 
-        self.logln(f"Salon: chargé dans le player ({len(channels)} chaînes).")
-        self.tabs.setCurrentIndex(2)  # basculer sur Lecteur
+        self.logln(f"Salon: charge dans le player ({len(channels)} chaines).")
+        self.tabs.setCurrentIndex(2)
+        self._maybe_auto_epg_for_salon(rec.epg_url if rec else "", playlist_id)
 
     def on_salon_open_in_editor(self, playlist_id: int):
         try:
@@ -1719,12 +1860,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.logln(f"Salon: erreur DB: {e}")
             return
 
-        # Mémoriser contexte d'édition (nom + source) pour overwrite ultérieur
         rec = None
         try:
             rec = next((p for p in self.db.list_playlists() if int(p.id) == int(playlist_id)), None)
         except Exception:
             rec = None
+
         self._editing_playlist_id = int(playlist_id)
         self._editing_playlist_name = rec.name if rec else None
         if rec and rec.url:
@@ -1733,34 +1874,19 @@ class MainWindow(QtWidgets.QMainWindow):
             self.epg_url.setText(rec.epg_url or "")
         self._update_export_salon_label()
 
-        channels: list[Channel] = []
-        for r in rows:
-            channels.append(Channel(
-                extinf=r.get("extinf", ""),
-                url=r.get("url", ""),
-                name=r.get("name", ""),
-                group=r.get("group", ""),
-                tvg_id=r.get("tvg_id", ""),
-                vlc_opts=r.get("vlc_opts", []) or [],
-                status="—",
-            ))
-
+        channels = self._channels_from_db_rows(rows)
         if not channels:
             self.logln("Salon: playlist vide.")
             return
 
         self._log_risk_overview(channels)
-        # ✅ charge dans l’éditeur (onglet Chaînes)
         self.channels = channels
         self.refresh_table(self.channels)
         self.search.clear()
-        self.logln(f"Éditeur: playlist Salon chargée ({len(channels)} chaînes).")
+        self.logln(f"Editeur: playlist Salon chargee ({len(channels)} chaines).")
 
-        # optionnel: garder en mémoire quelle playlist on édite
-        self._editing_playlist_id = int(playlist_id)
-
-        self.tabs.setCurrentIndex(1)  # onglet "Chaînes"
-
+        self.tabs.setCurrentIndex(1)
+        self._maybe_auto_epg_for_salon(rec.epg_url if rec else "", playlist_id)
 
     # -------- VLC --------
 
@@ -1787,14 +1913,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.btn_epg_update.setEnabled(False)
         self.btn_epg_guide.setEnabled(False)
+        self.epg_progress.emit("EPG: preparation...")
+        cache_key = self._epg_cache_key()
 
         def run():
             try:
+                self.epg_progress.emit("EPG: analyse de la cible...")
                 p = Path(raw)
 
                 # If the target is a local npm repo, generate XMLTV locally; otherwise download the remote feed.
                 if p.exists() and p.is_dir() and (p / "package.json").exists():
-                    self.logln(f"EPG: génération via repo npm: {p}")
+                    msg = f"EPG: generation via repo npm: {p}"
+                    self.logln(msg)
+                    self.epg_progress.emit(msg)
 
                     tvg_ids = [c.tvg_id for c in self.channels if (c.tvg_id or "").strip()]
                     xml = generate_xmltv_for_tvg_ids(
@@ -1805,24 +1936,32 @@ class MainWindow(QtWidgets.QMainWindow):
                         log=self.logln,
                     )
                 else:
-                    self.logln(f"EPG: téléchargement + import: {raw}")
+                    msg = f"EPG: telechargement + import: {raw}"
+                    self.logln(msg)
+                    self.epg_progress.emit(msg)
                     xml = download_xmltv(raw)
 
-                self.db.clear_epg()
-                self.db.upsert_epg_programs(iter_programs(xml))
-                self.epg_loaded = True
-                self.epg_ok.emit()
+                programs = list(iter_programs(xml))
+                QtCore.QTimer.singleShot(0, self, lambda: self._load_epg_snapshot(xml, programs, cache_key))
 
             except Exception as e:
                 self.epg_fail.emit(str(e))
 
         threading.Thread(target=run, daemon=True).start()
 
+    @QtCore.Slot(str)
+    def on_epg_progress(self, msg: str):
+        self.lbl_epg_status.setText(msg or "")
+
     @QtCore.Slot()
     def on_epg_ok(self):
         self.btn_epg_update.setEnabled(True)
         self.btn_epg_guide.setEnabled(True)
         self.logln("EPG: import OK.")
+        if self._last_epg_coverage:
+            self.lbl_epg_status.setText(self._last_epg_coverage)
+        else:
+            self.lbl_epg_status.setText("EPG: import OK.")
         if self.player_widget is not None:
             try:
                 self.player_widget.set_epg_callbacks(
@@ -1838,6 +1977,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_epg_update.setEnabled(True)
         self.btn_epg_guide.setEnabled(False)
         self.logln(f"EPG: erreur import: {err}", level="ERROR")
+        self.lbl_epg_status.setText(f"EPG: erreur: {err}")
+
+    def on_epg_export(self):
+        if not self._last_epg_xml:
+            self.logln("EPG: rien a exporter (pas de snapshot).")
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Exporter EPG (snapshot)", "epg_snapshot.xml", "XMLTV (*.xml);;Tous (*.*)"
+        )
+        if not path:
+            return
+        try:
+            Path(path).write_bytes(self._last_epg_xml)
+            self.logln(f"EPG: snapshot exporte -> {path}")
+        except Exception as e:
+            self.logln(f"EPG: erreur Exporte: {e}", level="ERROR")
 
     def on_epg_guide(self):
         sel = self.table.selectionModel().selectedRows()
@@ -1999,9 +2154,75 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_export_salon_label(self):
         if self._editing_playlist_id is not None and self._editing_playlist_name:
-            self.btn_export_salon.setText(f"Enregistrer '{self._editing_playlist_name}'")
+            self.act_export_salon.setText(f"Enregistrer '{self._editing_playlist_name}'")
         else:
-            self.btn_export_salon.setText("Exporter au Salon")
+            self.act_export_salon.setText("Exporter au Salon")
+
+    # -------- EPG helpers --------
+    def _epg_cache_key(self) -> str | None:
+        if self._editing_playlist_id is not None:
+            return f"playlist_{int(self._editing_playlist_id)}"
+        raw = self.epg_url.text().strip() if hasattr(self, "epg_url") else ""
+        if raw:
+            return f"url_{abs(hash(raw))}"
+        return None
+
+    def _epg_cache_path(self, key: str) -> Path:
+        return self._epg_cache_dir / f"{key}.xml"
+
+    def _load_epg_snapshot(self, xml_bytes: bytes, programs: list[dict], cache_key: str | None):
+        try:
+            self.epg_progress.emit(f"EPG: insertion snapshot ({len(programs)} programmes)...")
+            self.db.clear_epg()
+            self.db.upsert_epg_programs(programs)
+            self.epg_loaded = True
+            self._last_epg_xml = xml_bytes
+
+            if cache_key:
+                try:
+                    self._epg_cache_dir.mkdir(parents=True, exist_ok=True)
+                    self._epg_cache_path(cache_key).write_bytes(xml_bytes)
+                except Exception:
+                    pass
+
+            tvg_in_epg = {p.get("tvg_id", "") for p in programs}
+            total_with_id = sum(1 for c in self.channels if (c.tvg_id or "").strip())
+            matched = sum(1 for c in self.channels if (c.tvg_id or "").strip() in tvg_in_epg)
+            coverage_txt = f"EPG: couverture {matched}/{total_with_id} tvg-id" if total_with_id else "EPG: aucune tvg-id"
+            self._last_epg_coverage = coverage_txt
+            self.epg_progress.emit(coverage_txt)
+            self.epg_progress.emit("EPG: import termine.")
+            self.epg_ok.emit()
+        except Exception as e:
+            self.epg_fail.emit(str(e))
+
+    def _try_load_epg_cache(self, epg_url: str, playlist_id: int | None = None) -> bool:
+        key = f"playlist_{int(playlist_id)}" if playlist_id is not None else (f"url_{abs(hash(epg_url))}" if epg_url else None)
+        if not key:
+            return False
+        path = self._epg_cache_path(key)
+        if not path.exists():
+            return False
+        try:
+            age_h = (time.time() - path.stat().st_mtime) / 3600.0
+            if age_h > float(self._epg_cache_ttl_hours):
+                return False
+            xml = path.read_bytes()
+            programs = list(iter_programs(xml))
+            self._load_epg_snapshot(xml, programs, key)
+            self.logln(f"EPG: cache charge ({path.name}, age {age_h:.1f}h).")
+            return True
+        except Exception as e:
+            self.logln(f"EPG: cache invalide ({e}).")
+            return False
+
+    def _maybe_auto_epg_for_salon(self, epg_url: str, playlist_id: int | None):
+        if not epg_url or not self.chk_epg_auto.isChecked():
+            return
+        if self._try_load_epg_cache(epg_url, playlist_id):
+            return
+        # Pas de cache frais: lancer un update si URL connue
+        self.on_epg_update()
 
     def import_m3u_text(self, text: str, label: str = ""):
         # Toute importation "fraîche" invalide un contexte d'édition Salon
@@ -2012,14 +2233,56 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.channels = parse_m3u(text)
         self._log_risk_overview(self.channels)
-        if self.player_widget is not None:
-            try:
-                self.player_widget.set_channels_from_objects(self.channels)
-            except Exception:
-                pass
         self.logln(f"Importé: {len(self.channels)} chaînes ({source_label})")
         self.apply_filter()
         self.tabs.setCurrentIndex(1)
+
+
+    def _merge_channels(self, new_channels: list[Channel], source_label: str):
+        if new_channels is None:
+            return
+        existing_by_url: dict[str, Channel] = {}
+        merged: list[Channel] = []
+
+        for c in self.channels:
+            key = (c.url or "").strip()
+            if key and key not in existing_by_url:
+                existing_by_url[key] = c
+                merged.append(c)
+
+        added = 0
+        for c in new_channels:
+            key = (c.url or "").strip()
+            if not key or key in existing_by_url:
+                continue
+            existing_by_url[key] = c
+            merged.append(c)
+            added += 1
+
+        if added == 0:
+            self.logln(f"Fusion: aucune nouvelle chaine (source: {source_label}).")
+            return
+
+        self.channels = merged
+        self._log_risk_overview(self.channels)
+        self.apply_filter()
+        self.logln(f"Fusion: +{added}, total {len(self.channels)} (source: {source_label}).")
+
+    def _channels_from_db_rows(self, rows: list[dict]) -> list[Channel]:
+        out = []
+        for r in rows:
+            out.append(
+                Channel(
+                    extinf=r.get("extinf", ""),
+                    url=r.get("url", ""),
+                    name=r.get("name", ""),
+                    group=r.get("group", ""),
+                    tvg_id=r.get("tvg_id", ""),
+                    vlc_opts=r.get("vlc_opts", []) or [],
+                    status="-",
+                )
+            )
+        return out
 
     def on_load_file(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -2037,29 +2300,132 @@ class MainWindow(QtWidgets.QMainWindow):
         if not ok or not url.strip():
             return
         url = url.strip()
-        self.btn_load_url.setEnabled(False)
-        self.logln(f"Téléchargement: {url}")
+        self.act_import_url.setEnabled(False)
+        self.logln(f"Telechargement: {url}")
 
         def run():
             try:
                 text = requests.get(url, timeout=20).text
                 self.import_merged.emit(text, url)
             except Exception as e:
-                self.logexc("Erreur téléchargement", e)
+                self.logexc("Erreur telechargement", e)
             finally:
-                QtCore.QTimer.singleShot(0, self, lambda: self.btn_load_url.setEnabled(True))
+                QtCore.QTimer.singleShot(0, self, lambda: self.act_import_url.setEnabled(True))
+
+        threading.Thread(target=run, daemon=True).start()
+    def on_merge_file(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Fusionner playlist", "", "M3U (*.m3u *.m3u8);;Tous (*.*)"
+        )
+        if not path:
+            return
+        text = Path(path).read_text(encoding="utf-8", errors="ignore")
+        new_channels = parse_m3u(text)
+        self._merge_channels(new_channels, Path(path).name)
+
+    def on_merge_url(self):
+        url, ok = QtWidgets.QInputDialog.getText(
+            self, "Fusionner depuis une URL", "Colle l'URL .m3u/.m3u8 :"
+        )
+        if not ok or not url.strip():
+            return
+        url = url.strip()
+        self.logln(f"Fusion: telechargement {url}")
+
+        def run():
+            try:
+                text = requests.get(url, timeout=20).text
+                new_channels = parse_m3u(text)
+                QtCore.QTimer.singleShot(0, self, lambda: self._merge_channels(new_channels, url))
+            except Exception as e:
+                self.logexc("Erreur fusion URL", e)
 
         threading.Thread(target=run, daemon=True).start()
 
+    def on_merge_salon(self):
+        try:
+            playlists = self.db.list_playlists()
+        except Exception as e:
+            self.logln(f"Salon: erreur DB: {e}")
+            return
+        if not playlists:
+            self.logln("Salon: aucune playlist disponible.")
+            return
+        labels = [f"#{p.id} - {p.name}" for p in playlists]
+        choice, ok = QtWidgets.QInputDialog.getItem(
+            self, "Fusionner playlist du Salon", "Choisis une playlist :", labels, 0, False
+        )
+        if not ok or not choice:
+            return
+        try:
+            pid = int(choice.split()[0].lstrip("#"))
+        except Exception:
+            self.logln("Salon: choix invalide.")
+            return
+        try:
+            rows = self.db.get_channels(pid)
+        except Exception as e:
+            self.logln(f"Salon: erreur lecture playlist: {e}")
+            return
+        new_channels = self._channels_from_db_rows(rows)
+        self._merge_channels(new_channels, f"Salon #{pid}")
+
+    def on_merge_txt_links(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Fichier TXT (liens m3u/m3u8)", "", "Texte (*.txt);;Tous (*.*)"
+        )
+        if not path:
+            return
+        urls = []
+        for line in Path(path).read_text(encoding="utf-8", errors="ignore").splitlines():
+            u = line.strip()
+            if not u.lower().startswith("http"):
+                continue
+            if not (u.lower().endswith(".m3u") or u.lower().endswith(".m3u8")):
+                continue
+            if u not in urls:
+                urls.append(u)
+        if not urls:
+            self.logln("Fusion TXT: aucun lien m3u/m3u8 detecte.")
+            return
+        self.logln(f"Fusion TXT: telechargement {len(urls)} playlist(s)...")
+
+        def run():
+            merged_channels: list[Channel] = []
+            for u in urls:
+                try:
+                    t = requests.get(u, timeout=25).text
+                    merged_channels.extend(parse_m3u(t))
+                except Exception as e:
+                    self.logln(f"Fusion TXT: KO {u}: {e}")
+            if merged_channels:
+                QtCore.QTimer.singleShot(0, self, lambda: self._merge_channels(merged_channels, Path(path).name))
+            else:
+                QtCore.QTimer.singleShot(0, self, lambda: self.logln("Fusion TXT: rien a fusionner."))
+
+        threading.Thread(target=run, daemon=True).start()
+
+
+    def on_merge_streams_api(self):
+        self.streams_widget.set_import_mode("merge")
+        self.streams_widget.ensure_loaded()
+        self.tabs.setCurrentIndex(self.streams_tab_index)
+
     def on_test(self):
         if not self.channels:
-            self.logln("Aucune playlist chargée.")
+            self.logln("Aucune playlist chargee.")
             return
         if self._probe_thread:
-            self.logln("Test déjà en cours.")
+            self.logln("Test deja en cours.")
             return
 
-        self.logln("Début test URLs…")
+        self.logln("Debut test URLs...")
+        self._probe_done = 0
+        self._probe_total = len(self.channels)
+        if self._probe_total:
+            self.lbl_probe_status.setText(f"Test URLs: 0/{self._probe_total}")
+        else:
+            self.lbl_probe_status.clear()
         self.btn_test.setEnabled(False)
         self.btn_stop.setEnabled(True)
 
@@ -2069,6 +2435,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._probe_thread.started.connect(self._probe_worker.run)
         self._probe_worker.progress.connect(self.on_probe_progress)
+        self._probe_worker.progress_count.connect(self.on_probe_progress_count)
         self._probe_worker.finished.connect(self.on_probe_finished)
         self._probe_worker.finished.connect(self._probe_thread.quit)
         self._probe_worker.finished.connect(self._probe_worker.deleteLater)
@@ -2101,7 +2468,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     except Exception as e:
                         self.logln(f"Salon: erreur suppression playlist: {e}")
                 return
-            self.logln("Salon: rien à exporter (liste vide/filtre vide).")
+            self.logln("Salon: rien à exporter (liste vide/filtree vide).")
             return
 
         # Nom pré-rempli: si édition d'une playlist Salon, on propose le nom existant.
@@ -2205,6 +2572,12 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception:
             pass
 
+    @QtCore.Slot(int, int)
+    def on_probe_progress_count(self, done: int, total: int):
+        self._probe_done = done
+        self._probe_total = total
+        self.lbl_probe_status.setText(f"Test URLs: {done}/{total}")
+
     @QtCore.Slot(int, str)
     def on_probe_progress(self, row: int, status: str):
         self.channels[row].status = status
@@ -2217,10 +2590,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def on_probe_finished(self):
-        self.logln("Test terminé.")
+        self.logln("Test termine.")
         self.btn_test.setEnabled(True)
         self.btn_stop.setEnabled(False)
         self.search.setEnabled(True)
+        if self._probe_total:
+            self.lbl_probe_status.setText(f"Test URLs: termine ({self._probe_done}/{self._probe_total})")
+        else:
+            self.lbl_probe_status.clear()
 
         if self._probe_thread is not None:
             self._probe_thread.quit()
@@ -2232,7 +2609,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_stop(self):
         if self._probe_worker:
             self._probe_worker.stop()
-            self.logln("Stop demandé…")
+            self.logln("Stop demande.")
+            self.lbl_probe_status.setText("Test URLs: stop demande")
 
     def on_delete_dead(self):
         before = len(self.channels)
@@ -2254,21 +2632,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         before = len(self.channels)
         self.channels = [c for c in self.channels if (c.name, c.url) not in selected_keys]
-        self.logln(f"Supprimé sélection: {before - len(self.channels)}")
+        self.logln(f"Supprime selection: {before - len(self.channels)}")
         self.apply_filter()
 
     def on_export(self):
         if not self.channels:
             return
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Exporter playlist filtrée", "playlist.filtered.m3u", "M3U (*.m3u)"
+            self, "Exporter playlist filtree", "playlist.filtered.m3u", "M3U (*.m3u)"
         )
         if not path:
             return
         write_m3u(self.channels, Path(path))
-        self.logln(f"Exporté: {path}")
+        self.logln(f"Exporte: {path}")
 
-    # -------- Playlist Browser --------
+    def on_send_to_player(self):
+        if not self.channels:
+            self.logln("Lecteur: aucune playlist chargee.")
+            return
+        player = self._ensure_player_widget()
+        try:
+            player.set_channels_from_objects(self.channels)
+            self.logln(f"Lecteur: playlist chargee ({len(self.channels)} chaines).")
+            self.tabs.setCurrentIndex(2)
+        except Exception as e:
+            self.logln(f"Lecteur: erreur chargement playlist: {e}")
+            return
 
     def _tree_click_expand(self, item, column):
         if not item.text(1).strip():
@@ -2278,8 +2667,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_load_selected_list.setEnabled(len(self.tree.selectedItems()) > 0)
 
     def on_open_streams_dialog(self):
-        dlg = StreamsDialog(self, log=self.logln)
-        dlg.exec()
+        self.streams_widget.set_import_mode("replace")
+        self.streams_widget.ensure_loaded()
+        self.tabs.setCurrentIndex(self.streams_tab_index)
 
     def on_refresh_playlists(self):
         self.btn_refresh_lists.setEnabled(False)
@@ -2335,7 +2725,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_refresh_lists.setEnabled(True)
         self.logln("OK: playlists chargées. Déplie Category/Language/Country puis sélectionne → « Charger la sélection ».")
 
-    def apply_tree_filter(self):
+    def apply_tree_filtreer(self):
         q = self.list_search.text().strip().lower()
         if not q:
             for item, _ in self._all_tree_items:
@@ -2417,7 +2807,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def _save_user_config(self):
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            data = {"theme": self._current_theme, "style": self._current_style}
+            data = {
+                "theme": self._current_theme,
+                "style": self._current_style,
+                "epg_path": self._current_epg_path,
+            }
             self.config_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception:
             pass
+
+

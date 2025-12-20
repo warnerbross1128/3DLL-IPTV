@@ -82,6 +82,7 @@ class Storage:
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_epg_tvg_start ON epg_programs(tvg_id, start_ts);
+
                 """
             )
 
