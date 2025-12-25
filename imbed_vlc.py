@@ -8,6 +8,10 @@ from typing import Callable, Optional
 
 import vlc
 from PySide6 import QtCore, QtGui, QtWidgets
+try:
+    import shiboken6
+except Exception:
+    shiboken6 = None
 
 # Widgets Qt pour embarquer VLC et afficher playlist/EPG dans le lecteur intégré.
 
@@ -262,6 +266,10 @@ class EpgGridGuide(QtWidgets.QWidget):
         self.tbl.clear()
         self.tbl.setRowCount(len(self._visible_idx))
         self.tbl.setColumnCount(1 + slot_count)
+        try:
+            self.tbl.clearSpans()
+        except Exception:
+            pass
 
         labels = ['Chaine']
         for i in range(slot_count):
@@ -287,6 +295,7 @@ class EpgGridGuide(QtWidgets.QWidget):
         for row, ch_idx in enumerate(self._visible_idx):
             ch = channels[ch_idx]
             self.tbl.setItem(row, 0, mk_item(ch.name or '(sans nom)'))
+            occupied = [False] * slot_count
 
             tvg_id = (ch.tvg_id or '').strip()
             if not tvg_id or not self._list_programs:
@@ -317,6 +326,11 @@ class EpgGridGuide(QtWidgets.QWidget):
 
                 col = 1 + start_slot
                 span = end_slot - start_slot
+                # éviter les overlaps : si déjà occupé, on ignore ce programme
+                if any(occupied[start_slot:end_slot]):
+                    continue
+                for k in range(start_slot, end_slot):
+                    occupied[k] = True
 
                 title = (p.get('title') or '').strip() or '(sans titre)'
                 it = mk_item(title)
@@ -424,6 +438,11 @@ class EpgGridGuide(QtWidgets.QWidget):
         self._current_idx = ch_idx
         self._update_channel_labels()
         self.channel_activated.emit(ch_idx)
+        try:
+            self.player.set_channel_label(self._channels[ch_idx].name)
+            self.player.show_controls(force=True)
+        except Exception:
+            pass
 class VlcPlayerWidget(QtWidgets.QWidget):
     """Widget VLC réutilisable (PySide6 + python-vlc)"""
 
@@ -462,6 +481,10 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         self.mute_button.setCheckable(True)
         self.mute_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MediaVolume))
 
+        self.lbl_channel_name = QtWidgets.QLabel("–")
+        self.lbl_channel_name.setMinimumWidth(160)
+        self.lbl_channel_name.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+
         self.volume_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self.volume_slider.setRange(0, 100)
         self.volume_slider.setValue(80)
@@ -480,6 +503,7 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         controls.addWidget(self.play_button)
         controls.addWidget(self.stop_button)
         controls.addWidget(self.btn_next)
+        controls.addWidget(self.lbl_channel_name, 1)
         controls.addWidget(self.position_slider, 1)
         controls.addWidget(self.lbl_time)
         controls.addWidget(self.mute_button)
@@ -528,6 +552,23 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         self.position_slider.sliderReleased.connect(self._scrub_end)
         self.btn_fullscreen.clicked.connect(self.toggle_fullscreen)
 
+        # Raccourcis globaux (application) pour éviter l'interférence avec la table EPG
+        self._shortcuts: list[QtWidgets.QShortcut] = []
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_F), self.toggle_fullscreen)
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_Space), self._toggle_play_pause)
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_K), self._toggle_play_pause)
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_M), lambda: self.mute_button.toggle())
+        for key in (QtCore.Qt.Key_Up, QtCore.Qt.Key_Plus, QtCore.Qt.Key_Equal):
+            self._add_shortcut(QtGui.QKeySequence(key), lambda k=key: self._adjust_volume(+5))
+        for key in (QtCore.Qt.Key_Down, QtCore.Qt.Key_Minus):
+            self._add_shortcut(QtGui.QKeySequence(key), lambda k=key: self._adjust_volume(-5))
+        # Flèches = zap playlist, J/L = seek ±10s
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_Right), self._zap_next)
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_Left), self._zap_prev)
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_L), lambda: self._seek_relative(+10))
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_J), lambda: self._seek_relative(-10))
+        self._add_shortcut(QtGui.QKeySequence(QtCore.Qt.Key_Escape), lambda: self.set_fullscreen(False))
+
         # Raccourcis clavier pour plein écran (F / Esc)
         for w in (self, self.video):
             w.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -555,6 +596,10 @@ class VlcPlayerWidget(QtWidgets.QWidget):
     def set_fullscreen(self, enabled: bool):
         enabled = bool(enabled)
         if enabled == self._fullscreen:
+            return
+
+        # Si le widget vidéo a été détruit (shutdown pendant un event), on ignore.
+        if shiboken6 and not shiboken6.isValid(self.video):
             return
 
         if enabled:
@@ -672,8 +717,36 @@ class VlcPlayerWidget(QtWidgets.QWidget):
 
     def shutdown(self):
         """À appeler à la fermeture de l'app."""
-        self.set_fullscreen(False)
-        self.stop()
+        try:
+            self._controls_hide_timer.stop()
+            self._cursor_poll_timer.stop()
+            self.timer.stop()
+        except Exception:
+            pass
+
+        try:
+            self.set_fullscreen(False)
+        except Exception:
+            pass
+
+        try:
+            self.stop()
+        except Exception:
+            pass
+
+        # Libère explicitement les ressources VLC pour éviter un crash à la fermeture.
+        try:
+            self.player.set_hwnd(0)
+        except Exception:
+            pass
+        try:
+            self.player.release()
+        except Exception:
+            pass
+        try:
+            self.instance.release()
+        except Exception:
+            pass
 
     def set_zap_enabled(self, enabled: bool):
         enabled = bool(enabled)
@@ -703,6 +776,8 @@ class VlcPlayerWidget(QtWidgets.QWidget):
             pass
 
     def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:
+        if shiboken6 and not shiboken6.isValid(self.video):
+            return False
         if event.type() == QtCore.QEvent.KeyPress:
             key = event.key()
             if key == QtCore.Qt.Key_F:
@@ -714,6 +789,24 @@ class VlcPlayerWidget(QtWidgets.QWidget):
                     self.controls_widget.setVisible(False)
                 else:
                     self._show_controls_overlay(force=True)
+                return True
+            if key in (QtCore.Qt.Key_Space, QtCore.Qt.Key_K):
+                self._toggle_play_pause()
+                return True
+            if key == QtCore.Qt.Key_M:
+                self.mute_button.toggle()
+                return True
+            if key in (QtCore.Qt.Key_Up, QtCore.Qt.Key_Plus, QtCore.Qt.Key_Equal):
+                self._adjust_volume(+5)
+                return True
+            if key in (QtCore.Qt.Key_Down, QtCore.Qt.Key_Minus):
+                self._adjust_volume(-5)
+                return True
+            if key in (QtCore.Qt.Key_Right, QtCore.Qt.Key_L):
+                self._seek_relative(+10)
+                return True
+            if key in (QtCore.Qt.Key_Left, QtCore.Qt.Key_J):
+                self._seek_relative(-10)
                 return True
             if key == QtCore.Qt.Key_Escape and self._fullscreen:
                 self.set_fullscreen(False)
@@ -744,13 +837,53 @@ class VlcPlayerWidget(QtWidgets.QWidget):
         else:
             self.play()
 
+    def _adjust_volume(self, delta: int):
+        v = max(0, min(100, self.volume_slider.value() + int(delta)))
+        block = self.volume_slider.blockSignals(True)
+        self.volume_slider.setValue(v)
+        self.volume_slider.blockSignals(block)
+        self._on_volume(v)
+
+    def _zap_next(self):
+        self.next_requested.emit()
+
+    def _zap_prev(self):
+        self.prev_requested.emit()
+
+    def set_channel_label(self, name: str):
+        name = (name or "").strip() or "–"
+        self.lbl_channel_name.setText(name)
+
+    def _add_shortcut(self, keyseq: QtGui.QKeySequence, handler: Callable[[], None]):
+        sc = QtGui.QShortcut(keyseq, self)
+        sc.setContext(QtCore.Qt.ApplicationShortcut)
+        sc.activated.connect(handler)
+        self._shortcuts.append(sc)
+
+    def _seek_relative(self, seconds: int):
+        try:
+            length = self.player.get_length()
+            if length <= 0:
+                return
+            cur = self.player.get_time()
+            if cur < 0:
+                return
+            new_time = max(0, min(length, cur + int(seconds * 1000)))
+            self.player.set_time(new_time)
+        except Exception:
+            pass
+
     def _show_controls_overlay(self, force: bool = False):
         if not self._fullscreen or not self._fs_window:
+            self.controls_widget.setVisible(True)
             return
         self.controls_widget.setVisible(True)
         self.controls_widget.raise_()
         if force:
             self._controls_hide_timer.start()
+
+    def show_controls(self, force: bool = False):
+        self._show_controls_overlay(force=force)
 
     def _maybe_show_controls(self, obj: QtCore.QObject, event: QtCore.QEvent):
         if not self._fullscreen or not self._fs_window:
@@ -998,6 +1131,10 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         self._channels = channels or []
         self.epg_grid.set_channels(self._channels)
         self.player.set_zap_enabled(bool(self.epg_grid.visible_indices()))
+        try:
+            self.player.set_channel_label("–")
+        except Exception:
+            pass
 
     def set_channels_from_objects(self, channels: list[object]):
         """
@@ -1041,15 +1178,22 @@ class VlcPlayerPanel(QtWidgets.QWidget):
             return
 
         vlc_opts: list[str] = []
+        ch_name = "-"
         for ch in self._channels or []:
             if (ch.url or "").strip() == url:
                 vlc_opts = list(getattr(ch, "vlc_opts", []) or [])
+                ch_name = ch.name
                 break
         try:
             self.epg_grid.select_by_url(url)
         except Exception:
             pass
         self.player.play_url(url, vlc_opts=vlc_opts)
+        try:
+            self.player.set_channel_label(ch_name)
+            self.player.show_controls(force=True)
+        except Exception:
+            pass
 
     def shutdown(self):
         try:
@@ -1068,8 +1212,16 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         url = (ch.url or "").strip()
         if not url:
             return
+        try:
+            self.player.set_channel_label(ch.name)
+        except Exception:
+            pass
         self._log(f"Lecture: {url}")
         self.player.play_url(url, vlc_opts=list(getattr(ch, "vlc_opts", []) or []))
+        try:
+            self.player.show_controls(force=True)
+        except Exception:
+            pass
 
     def _on_channel_selected_from_grid(self, _idx: int):
         # Rien a lancer automatiquement: la grille gere les details.
@@ -1121,3 +1273,7 @@ class VlcPlayerPanel(QtWidgets.QWidget):
         row = (row + int(delta)) % n
         self.epg_grid.set_current_channel_index(visible[row])
         self._play_current_channel()
+        try:
+            self.player.show_controls(force=True)
+        except Exception:
+            pass

@@ -1642,6 +1642,19 @@ class MainWindow(QtWidgets.QMainWindow):
               <li><a href="https://github.com/iptv-org/epg">iptv-org/epg</a></li>
             </ul>
             <p>Un grand merci aux créateurs et mainteneurs d'<a href="https://github.com/iptv-org">iptv-org</a> pour leur travail communautaire sur les playlists et l'API.</p>
+            <h3>Raccourcis lecteur</h3>
+            <ul>
+              <li><b>F</b> : plein écran / sortie</li>
+              <li><b>C</b> : afficher/masquer la barre en plein écran</li>
+              <li><b>Espace</b> ou <b>K</b> : play/pause</li>
+              <li><b>M</b> : mute</li>
+              <li><b>↑</b> / <b>+</b> / <b>=</b> : volume +5</li>
+              <li><b>↓</b> / <b>-</b> : volume -5</li>
+              <li><b>→</b> : chaîne suivante</li>
+              <li><b>←</b> : chaîne précédente</li>
+              <li><b>L</b> : avance rapide (10 s)</li>
+              <li><b>J</b> : retour en arrière (10 s)</li>
+            </ul>
             """
         )
         info_layout.addWidget(info_text)
