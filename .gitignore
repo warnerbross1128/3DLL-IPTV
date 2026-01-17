@@ -23,21 +23,25 @@ env/
 
 # Donnees locales
 data/*.db
+data/config.json
+data/streams_cache.json
+data/epg_cache/
 Archives/
 V0.0.zip
 
-# Fichiers generes EPG/Node
+# EPG (repo tiers, ne pas inclure) + fichiers Node
+epg/
 epg/node_modules/
 epg/temp/
 epg/channels.xml
 epg/custom.xml
 epg/guide.xml*
 epg/.secrets
-epg/
 
 # OS / editeurs
 .DS_Store
 Thumbs.db
+.vscode/
 
 # TESTS
 TESTS/
