@@ -158,7 +158,7 @@ npm install
 ```bash
 python app.py
 ```
-Ou bien renommer en .pyw
+Ou bien renommer en .pyw. Me meilleur reste Vscode 
 
 La base SQLite est créée automatiquement dans :
 ```
